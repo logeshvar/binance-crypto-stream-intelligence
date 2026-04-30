@@ -1,0 +1,26 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local data lake output
+storage/bronze/*
+!storage/bronze/.gitkeep
+storage/silver/*
+!storage/silver/.gitkeep
+storage/gold/*
+!storage/gold/.gitkeep
+storage/checkpoints/*
+!storage/checkpoints/.gitkeep
+
+# Local runtime files
+*.log
+.DS_Store
+
+# IDE metadata
+.idea/
+.vscode/

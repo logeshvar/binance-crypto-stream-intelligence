@@ -1,0 +1,44 @@
+kafka:
+  bootstrap_server: localhost:9092
+  internal_bootstrap_server: kafka:9092
+
+topics:
+  - name: market.trades.raw
+    description: Raw trade events from Binance public WebSocket streams.
+    partitions: 6
+    replication_factor: 1
+    retention_ms: 259200000
+    cleanup_policy: delete
+    key: symbol
+
+  - name: market.klines.raw
+    description: Raw 1-minute kline/candlestick events from Binance public WebSocket streams.
+    partitions: 3
+    replication_factor: 1
+    retention_ms: 604800000
+    cleanup_policy: delete
+    key: symbol
+
+  - name: market.tickers.raw
+    description: Raw 24-hour ticker summary events from Binance public WebSocket streams.
+    partitions: 3
+    replication_factor: 1
+    retention_ms: 259200000
+    cleanup_policy: delete
+    key: symbol
+
+  - name: market.events.invalid
+    description: Dead-letter queue for invalid, malformed, or unroutable events.
+    partitions: 3
+    replication_factor: 1
+    retention_ms: 1209600000
+    cleanup_policy: delete
+    key: source_topic_or_error_type
+
+  - name: market.signals.alerts
+    description: Alert events generated from Gold-level market signals.
+    partitions: 3
+    replication_factor: 1
+    retention_ms: 604800000
+    cleanup_policy: delete
+    key: symbol

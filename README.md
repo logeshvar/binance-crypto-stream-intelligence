@@ -1,0 +1,139 @@
+# Real-Time Crypto Market Intelligence Pipeline
+
+Portfolio-grade streaming data engineering project for ingesting public crypto market data, processing it with Kafka and Spark Structured Streaming, storing Bronze/Silver/Gold Delta Lake datasets, and serving real-time market intelligence signals.
+
+This project is not a trading bot, does not execute trades, and does not provide financial advice. It uses only Binance public market WebSocket streams with no API key and no account-specific data.
+
+## Project Goal
+
+Crypto markets generate continuous, high-frequency trade and price events across many assets. Raw WebSocket payloads are semi-structured and not immediately suitable for analytics, monitoring, or dashboarding. This project builds a production-style streaming pipeline that validates, routes, stores, deduplicates, aggregates, and serves those events as market intelligence outputs.
+
+## Current Status
+
+Milestone 1 is implemented:
+
+- Local Kafka broker using Docker Compose
+- Kafka UI for topic inspection
+- Project folder scaffold
+- Topic configuration and creation script
+- Storage folders for Bronze, Silver, Gold, and checkpoints
+- Architecture documentation skeleton
+
+Next milestone: Kafka topic design and schema contracts.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["Binance public WebSocket streams"] --> B["Python async producer"]
+    B --> C["Kafka raw topics"]
+    B --> D["Kafka invalid/DLQ topic"]
+    C --> E["Spark Structured Streaming Bronze"]
+    D --> E
+    E --> F["Spark Structured Streaming Silver"]
+    F --> G["Spark Structured Streaming Gold"]
+    G --> H["Alert Kafka topic"]
+    G --> I["Dashboard/serving layer"]
+```
+
+## Local Services
+
+| Service | Purpose | Local URL |
+| --- | --- | --- |
+| Kafka | Local broker for raw, DLQ, and alert topics | `localhost:9092` |
+| Kafka UI | Inspect topics, partitions, messages, and consumer groups | `http://localhost:8080` |
+
+## Kafka Topics
+
+| Topic | Purpose | Partitions | Key |
+| --- | --- | ---: | --- |
+| `market.trades.raw` | Raw trade events from Binance WebSocket | 6 | `symbol` |
+| `market.klines.raw` | Raw 1-minute candlestick events | 3 | `symbol` |
+| `market.tickers.raw` | Raw 24-hour ticker events | 3 | `symbol` |
+| `market.events.invalid` | Dead-letter queue for invalid or malformed events | 3 | `source_topic` or `error_type` |
+| `market.signals.alerts` | Gold-level market intelligence alerts | 3 | `symbol` |
+
+## Quick Start
+
+Prerequisites:
+
+- Docker Desktop or compatible Docker runtime
+- Docker Compose v2
+- Bash
+
+Run the local stack:
+
+```bash
+cp .env.example .env
+docker compose up -d
+bash kafka/create_topics.sh
+docker compose ps
+```
+
+Open Kafka UI:
+
+```text
+http://localhost:8080
+```
+
+List topics:
+
+```bash
+docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+```
+
+The same workflow is available through `make`:
+
+```bash
+make up
+make topics
+make topics-list
+```
+
+## Repository Layout
+
+```text
+.
+├── docker-compose.yml
+├── Makefile
+├── README.md
+├── kafka/
+│   ├── create_topics.sh
+│   ├── kafka_design.md
+│   └── topic_config.yaml
+├── producers/
+├── schemas/
+├── streaming/
+│   ├── bronze/
+│   ├── silver/
+│   ├── gold/
+│   └── alerts/
+├── sinks/
+├── dashboards/
+├── tests/
+├── storage/
+│   ├── bronze/
+│   ├── silver/
+│   ├── gold/
+│   └── checkpoints/
+└── docs/
+    └── architecture.md
+```
+
+## Engineering Focus
+
+This project is designed to demonstrate senior-level streaming data engineering:
+
+- Kafka topic design and partitioning
+- Producer reliability and reconnect handling
+- Schema contracts and data validation
+- Dead-letter queue handling
+- Spark Structured Streaming with event-time semantics
+- Watermarking, checkpointing, and recovery
+- Delta Lake medallion architecture
+- Stateful aggregations and alerting
+- Operational dashboarding and documentation
+
+## Future Enhancements
+
+Optional enhancements are documented for later but intentionally not part of the first version: order book depth streams, schema registry, Prometheus/Grafana, Databricks deployment, AWS MSK, S3-backed Delta storage, ML-based anomaly detection, and CI/CD.
