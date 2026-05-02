@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/kline_event_v1.json",
+  "title": "Kline Event v1",
+  "description": "Normalized Binance public 1-minute kline event published to market.klines.raw.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_type",
+    "symbol",
+    "event_time",
+    "kline_start_time",
+    "kline_close_time",
+    "interval",
+    "open_price",
+    "high_price",
+    "low_price",
+    "close_price",
+    "volume",
+    "quote_asset_volume",
+    "number_of_trades",
+    "taker_buy_base_asset_volume",
+    "taker_buy_quote_asset_volume",
+    "is_closed",
+    "source",
+    "ingest_time"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "event_type": {
+      "type": "string",
+      "const": "kline"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{5,20}$",
+      "examples": ["ETHUSDT"]
+    },
+    "event_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Exchange event timestamp in UTC."
+    },
+    "kline_start_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "kline_close_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "interval": {
+      "type": "string",
+      "const": "1m"
+    },
+    "open_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "high_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "low_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "close_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "volume": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "quote_asset_volume": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "number_of_trades": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "taker_buy_base_asset_volume": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "taker_buy_quote_asset_volume": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "is_closed": {
+      "type": "boolean",
+      "description": "Whether Binance marked the kline interval as closed."
+    },
+    "source": {
+      "type": "string",
+      "const": "binance"
+    },
+    "ingest_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Producer-side ingestion timestamp in UTC."
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "event_type": "kline",
+      "symbol": "ETHUSDT",
+      "event_time": "2026-04-30T10:15:59.999Z",
+      "kline_start_time": "2026-04-30T10:15:00Z",
+      "kline_close_time": "2026-04-30T10:15:59.999Z",
+      "interval": "1m",
+      "open_price": "3120.10",
+      "high_price": "3124.00",
+      "low_price": "3118.45",
+      "close_price": "3122.30",
+      "volume": "18.420",
+      "quote_asset_volume": "57508.766",
+      "number_of_trades": 394,
+      "taker_buy_base_asset_volume": "10.200",
+      "taker_buy_quote_asset_volume": "31847.460",
+      "is_closed": true,
+      "source": "binance",
+      "ingest_time": "2026-04-30T10:16:00.250Z"
+    }
+  ]
+}

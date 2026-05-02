@@ -5,4 +5,8 @@ fileignoreconfig:
   checksum: bc3433548cab0b67fd54ea37b759c903370665d5d5b513b01fef5f990eda3429
 - filename: docs/architecture.md
   checksum: 98aee695e9766b084cfcd7016025a3c0e080faa40722d2609815fdf651dc2b9c
+- filename: docs/kafka_design.md
+  checksum: 4de6411dd08917d1d331fb5ab5790f2766adee4fb16bf2e03fc5bbf0ebcecc9c
+- filename: docs/schema_contracts.md
+  checksum: 53bc13afd5cd6bf5db29a2c36ebc06c171f1f75236ebaea77c17c6b444e96691
 version: ""

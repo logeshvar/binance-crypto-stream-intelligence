@@ -1,6 +1,6 @@
 # Kafka Design
 
-This document captures the local Kafka setup used by Milestone 1. The fuller topic contracts, schema contracts, and validation rules are expanded in Milestone 2.
+This document captures the Kafka assets located under `kafka/`. The broader topic design, schemas, headers, and consumer expectations live in `docs/kafka_design.md` and `docs/schema_contracts.md`.
 
 ## Local Broker
 
@@ -23,7 +23,7 @@ bash kafka/create_topics.sh
 
 Market event topics use `symbol` as the Kafka message key. This preserves per-symbol ordering while still allowing parallel processing across partitions.
 
-## Milestone 1 Topics
+## Topics
 
 | Topic | Partitions | Local Retention | Message Key |
 | --- | ---: | --- | --- |

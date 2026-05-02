@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/alert_event_v1.json",
+  "title": "Alert Event v1",
+  "description": "Market signal alert event published to market.signals.alerts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "symbol",
+    "alert_type",
+    "severity",
+    "window_start",
+    "window_end",
+    "metric_value",
+    "description",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{5,20}$",
+      "examples": ["BTCUSDT"]
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "VOLUME_SPIKE",
+        "PRICE_SURGE",
+        "PRICE_DROP",
+        "HIGH_VOLATILITY"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "window_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "window_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "metric_value": {
+      "type": "number",
+      "description": "Primary metric that triggered the alert, such as volume spike ratio or price change percentage."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "symbol": "BTCUSDT",
+      "alert_type": "VOLUME_SPIKE",
+      "severity": "HIGH",
+      "window_start": "2026-04-30T10:00:00Z",
+      "window_end": "2026-04-30T10:05:00Z",
+      "metric_value": 2.8,
+      "description": "BTCUSDT volume is 2.8x above baseline",
+      "created_at": "2026-04-30T10:05:10Z"
+    }
+  ]
+}

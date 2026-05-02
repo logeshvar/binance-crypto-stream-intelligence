@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/ticker_event_v1.json",
+  "title": "Ticker Event v1",
+  "description": "Normalized Binance public 24-hour ticker event published to market.tickers.raw.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_type",
+    "symbol",
+    "event_time",
+    "price_change",
+    "price_change_percent",
+    "weighted_avg_price",
+    "last_price",
+    "last_quantity",
+    "open_price",
+    "high_price",
+    "low_price",
+    "volume",
+    "quote_volume",
+    "open_time",
+    "close_time",
+    "first_trade_id",
+    "last_trade_id",
+    "trade_count",
+    "source",
+    "ingest_time"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "event_type": {
+      "type": "string",
+      "const": "ticker"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{5,20}$",
+      "examples": ["SOLUSDT"]
+    },
+    "event_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Exchange event timestamp in UTC."
+    },
+    "price_change": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "price_change_percent": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "weighted_avg_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "last_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "last_quantity": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "open_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "high_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "low_price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "volume": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "quote_volume": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "open_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "close_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "first_trade_id": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "last_trade_id": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "trade_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source": {
+      "type": "string",
+      "const": "binance"
+    },
+    "ingest_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Producer-side ingestion timestamp in UTC."
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "event_type": "ticker",
+      "symbol": "SOLUSDT",
+      "event_time": "2026-04-30T10:15:30.123Z",
+      "price_change": "1.25000000",
+      "price_change_percent": "0.820",
+      "weighted_avg_price": "152.43000000",
+      "last_price": "153.70000000",
+      "last_quantity": "4.12000000",
+      "open_price": "152.45000000",
+      "high_price": "155.10000000",
+      "low_price": "149.80000000",
+      "volume": "512430.12000000",
+      "quote_volume": "78100234.99000000",
+      "open_time": "2026-04-29T10:15:30.123Z",
+      "close_time": "2026-04-30T10:15:30.123Z",
+      "first_trade_id": 1000000,
+      "last_trade_id": 1012350,
+      "trade_count": 12351,
+      "source": "binance",
+      "ingest_time": "2026-04-30T10:15:30.500Z"
+    }
+  ]
+}

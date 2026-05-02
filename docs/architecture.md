@@ -4,7 +4,7 @@
 
 The Real-Time Crypto Market Intelligence Pipeline is a streaming data engineering project focused on Kafka, Spark Structured Streaming, Delta Lake, event-time processing, checkpointing, dead-letter handling, and operational serving.
 
-It ingests only Binance public market WebSocket data. It does not use paid APIs, API keys, private account streams, order execution APIs, or trading logic.
+It ingests only Binance public market WebSocket data. It does not use paid APIs, credentials, private account streams, order execution APIs, or trading logic.
 
 ## High-Level Flow
 
@@ -25,15 +25,14 @@ flowchart LR
     F --> H["Streamlit dashboard/serving layer"]
 ```
 
-## Milestone 1 Scope
-
-Milestone 1 creates the local foundation:
+## Local Foundation
 
 - Docker Compose for Kafka and Kafka UI
 - Config-driven Kafka topic definitions
 - Topic creation script
 - Base repository structure for producers, schemas, streaming jobs, sinks, dashboard, tests, storage, and docs
 - Local storage folders for Bronze, Silver, Gold, and checkpoints
+- JSON Schema contracts for raw market events, invalid events, and alerts
 
 ## Local Infrastructure
 
@@ -41,7 +40,7 @@ Milestone 1 creates the local foundation:
 | --- | --- | --- |
 | Kafka | Event log for raw market events, invalid events, and alerts | `localhost:9092` from host, `kafka:9092` inside Docker |
 | Kafka UI | Browser UI for inspecting topics, partitions, messages, and consumer groups | `http://localhost:8080` |
-| Local storage | Delta Lake paths and checkpoints for later Spark milestones | `./storage` |
+| Local storage | Delta Lake paths and checkpoints for Spark streaming jobs | `./storage` |
 
 The local Kafka broker runs in KRaft mode as a single-node development cluster. Topic replication factor is set to `1` because this is a local portfolio environment. The topic and code design keep the broker address and storage paths configurable so the project can later move to Databricks, MSK, or another managed Kafka runtime.
 
@@ -78,8 +77,6 @@ The project is designed around production-style streaming concerns:
 - Queryable Delta outputs for dashboard and serving
 
 ## Run Sequence
-
-Milestone 1 local infrastructure run sequence:
 
 ```bash
 cp .env.example .env

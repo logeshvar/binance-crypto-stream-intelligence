@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/trade_event_v1.json",
+  "title": "Trade Event v1",
+  "description": "Normalized Binance public trade event published to market.trades.raw.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_type",
+    "symbol",
+    "event_time",
+    "trade_id",
+    "price",
+    "quantity",
+    "trade_value",
+    "is_buyer_market_maker",
+    "source",
+    "ingest_time"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "event_type": {
+      "type": "string",
+      "const": "trade"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{5,20}$",
+      "examples": ["BTCUSDT"]
+    },
+    "event_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Exchange event timestamp in UTC."
+    },
+    "trade_id": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "price": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "quantity": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "trade_value": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+      "description": "price multiplied by quantity, represented as a decimal string."
+    },
+    "is_buyer_market_maker": {
+      "type": "boolean"
+    },
+    "source": {
+      "type": "string",
+      "const": "binance"
+    },
+    "ingest_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Producer-side ingestion timestamp in UTC."
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "event_type": "trade",
+      "symbol": "BTCUSDT",
+      "event_time": "2026-04-30T10:15:30.123Z",
+      "trade_id": 123456,
+      "price": "62500.12",
+      "quantity": "0.005",
+      "trade_value": "312.50060",
+      "is_buyer_market_maker": false,
+      "source": "binance",
+      "ingest_time": "2026-04-30T10:15:30.500Z"
+    }
+  ]
+}

@@ -8,18 +8,15 @@ This project is not a trading bot, does not execute trades, and does not provide
 
 Crypto markets generate continuous, high-frequency trade and price events across many assets. Raw WebSocket payloads are semi-structured and not immediately suitable for analytics, monitoring, or dashboarding. This project builds a production-style streaming pipeline that validates, routes, stores, deduplicates, aggregates, and serves those events as market intelligence outputs.
 
-## Current Status
-
-Milestone 1 is implemented:
+## Implemented Foundation
 
 - Local Kafka broker using Docker Compose
 - Kafka UI for topic inspection
 - Project folder scaffold
 - Topic configuration and creation script
 - Storage folders for Bronze, Silver, Gold, and checkpoints
-- Architecture documentation skeleton
-
-Next milestone: Kafka topic design and schema contracts.
+- JSON Schema contracts for raw market events, invalid events, and alerts
+- Kafka topic design documentation
 
 ## Architecture
 
@@ -45,13 +42,13 @@ flowchart LR
 
 ## Kafka Topics
 
-| Topic | Purpose | Partitions | Key |
-| --- | --- | ---: | --- |
-| `market.trades.raw` | Raw trade events from Binance WebSocket | 6 | `symbol` |
-| `market.klines.raw` | Raw 1-minute candlestick events | 3 | `symbol` |
-| `market.tickers.raw` | Raw 24-hour ticker events | 3 | `symbol` |
-| `market.events.invalid` | Dead-letter queue for invalid or malformed events | 3 | `source_topic` or `error_type` |
-| `market.signals.alerts` | Gold-level market intelligence alerts | 3 | `symbol` |
+| Topic | Purpose | Partitions | Key | Schema |
+| --- | --- | ---: | --- | --- |
+| `market.trades.raw` | Raw trade events from Binance WebSocket | 6 | `symbol` | `schemas/trade_event_v1.json` |
+| `market.klines.raw` | Raw 1-minute candlestick events | 3 | `symbol` | `schemas/kline_event_v1.json` |
+| `market.tickers.raw` | Raw 24-hour ticker events | 3 | `symbol` | `schemas/ticker_event_v1.json` |
+| `market.events.invalid` | Dead-letter queue for invalid or malformed events | 3 | `source_topic` or `error_type` | `schemas/invalid_event_v1.json` |
+| `market.signals.alerts` | Gold-level market intelligence alerts | 3 | `symbol` | `schemas/alert_event_v1.json` |
 
 ## Quick Start
 
@@ -103,6 +100,11 @@ make topics-list
 │   └── topic_config.yaml
 ├── producers/
 ├── schemas/
+│   ├── alert_event_v1.json
+│   ├── invalid_event_v1.json
+│   ├── kline_event_v1.json
+│   ├── ticker_event_v1.json
+│   └── trade_event_v1.json
 ├── streaming/
 │   ├── bronze/
 │   ├── silver/
@@ -117,8 +119,16 @@ make topics-list
 │   ├── gold/
 │   └── checkpoints/
 └── docs/
-    └── architecture.md
+    ├── architecture.md
+    ├── kafka_design.md
+    └── schema_contracts.md
 ```
+
+## Design Docs
+
+- [Architecture](docs/architecture.md)
+- [Kafka design](docs/kafka_design.md)
+- [Schema contracts](docs/schema_contracts.md)
 
 ## Engineering Focus
 
@@ -136,4 +146,4 @@ This project is designed to demonstrate senior-level streaming data engineering:
 
 ## Future Enhancements
 
-Optional enhancements are documented for later but intentionally not part of the first version: order book depth streams, schema registry, Prometheus/Grafana, Databricks deployment, AWS MSK, S3-backed Delta storage, ML-based anomaly detection, and CI/CD.
+Optional enhancements include order book depth streams, schema registry, Prometheus/Grafana, Databricks deployment, AWS MSK, S3-backed Delta storage, ML-based anomaly detection, and CI/CD.
