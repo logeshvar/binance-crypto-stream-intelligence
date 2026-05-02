@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: .env.example
-  checksum: 58f356aa427b480d239e248ae6095cb1f95667fc0d19200e8e91d01f45c8f8d3
+  checksum: d7f57ff1707191dfe25ed47e0c3fdd4d0e6677044d88bbcf9db61a66037cdc2f
 - filename: kafka/topic_config.yaml
   checksum: bc3433548cab0b67fd54ea37b759c903370665d5d5b513b01fef5f990eda3429
 - filename: docs/architecture.md
@@ -9,4 +9,16 @@ fileignoreconfig:
   checksum: 4de6411dd08917d1d331fb5ab5790f2766adee4fb16bf2e03fc5bbf0ebcecc9c
 - filename: docs/schema_contracts.md
   checksum: 53bc13afd5cd6bf5db29a2c36ebc06c171f1f75236ebaea77c17c6b444e96691
+- filename: tests/test_event_parser.py
+  checksum: b127784efe8cb504e3e3d71e86d56a206d0b5d20a47d56c6c6c078c4d91be1a7
+- filename: producers/kafka_producer.py
+  checksum: 91d9a068ce1843dbc4c830079eb29ce8d76e2c169019ca48c0dc1eba08715151
+- filename: producers/README.md
+  checksum: bba458160c45247b9b0b2c3771e185ddd2aa21b84fb9092d2d59b21f74bf9114
+- filename: producers/config.py
+  checksum: 34649dd23e73478dc18aad3da8500d123e4c29bcdc14fb0476f54fffda7b7214
+- filename: producers/binance_ws_producer.py
+  checksum: 5d69dcaa50b46d73b8000b6295a2cf76c79fc996d5b3f7d0fe5723b945b2d06c
+- filename: producers/event_router.py
+  checksum: 3485dbaf54d3d3da775799e038ba8afd69beb1e9f01b2327b92608cf8baae1b5
 version: ""

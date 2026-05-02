@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
+PYTHON ?= python3
 
 ifneq (,$(wildcard .env))
 include .env
@@ -9,7 +10,7 @@ endif
 KAFKA_INTERNAL_BOOTSTRAP_SERVERS ?= kafka:9092
 KAFKA_TOPICS_BIN ?= /opt/kafka/bin/kafka-topics.sh
 
-.PHONY: help up down restart ps logs topics topics-list topics-describe smoke-test
+.PHONY: help install-producer producer up down restart ps logs topics topics-list topics-describe smoke-test
 
 help:
 	@printf "Real-Time Crypto Market Intelligence Pipeline\n\n"
@@ -23,6 +24,15 @@ help:
 	@printf "  make topics-list      List Kafka topics\n"
 	@printf "  make topics-describe  Describe Kafka topics\n"
 	@printf "  make smoke-test       Verify Kafka is reachable and topics exist\n"
+	@printf "\nProducer targets:\n"
+	@printf "  make install-producer Install Python producer dependencies\n"
+	@printf "  make producer         Run the Binance WebSocket producer\n"
+
+install-producer:
+	$(PYTHON) -m pip install -r requirements.txt
+
+producer:
+	$(PYTHON) -m producers.binance_ws_producer
 
 up:
 	docker compose up -d

@@ -17,6 +17,7 @@ Crypto markets generate continuous, high-frequency trade and price events across
 - Storage folders for Bronze, Silver, Gold, and checkpoints
 - JSON Schema contracts for raw market events, invalid events, and alerts
 - Kafka topic design documentation
+- Async Binance WebSocket producer for trade, kline, and ticker streams
 
 ## Architecture
 
@@ -87,6 +88,22 @@ make topics
 make topics-list
 ```
 
+Install and run the producer:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m producers.binance_ws_producer
+```
+
+Or with Make after activating your virtual environment:
+
+```bash
+make install-producer
+make producer
+```
+
 ## Repository Layout
 
 ```text
@@ -99,6 +116,11 @@ make topics-list
 │   ├── kafka_design.md
 │   └── topic_config.yaml
 ├── producers/
+│   ├── binance_ws_producer.py
+│   ├── config.py
+│   ├── event_router.py
+│   ├── kafka_producer.py
+│   └── README.md
 ├── schemas/
 │   ├── alert_event_v1.json
 │   ├── invalid_event_v1.json

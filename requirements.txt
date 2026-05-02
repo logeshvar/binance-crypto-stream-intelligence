@@ -1,0 +1,4 @@
+aiokafka>=0.10,<1.0
+jsonschema>=4,<5
+pytest>=8,<9
+websockets>=12,<16
