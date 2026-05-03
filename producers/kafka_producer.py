@@ -4,16 +4,10 @@ import json
 import logging
 from typing import Any
 
+from aiokafka import AIOKafkaProducer
+
 from producers.config import ProducerConfig
 from producers.event_router import RoutedEvent
-
-try:
-    from aiokafka import AIOKafkaProducer
-except ImportError as exc:  # pragma: no cover - exercised when dependencies are missing.
-    AIOKafkaProducer = None  # type: ignore[assignment]
-    _AIOKAFKA_IMPORT_ERROR = exc
-else:
-    _AIOKAFKA_IMPORT_ERROR = None
 
 
 logger = logging.getLogger(__name__)
@@ -34,12 +28,6 @@ class MarketKafkaProducer:
         self._published_count = 0
 
     async def start(self) -> None:
-        if AIOKafkaProducer is None:
-            raise RuntimeError(
-                "aiokafka is not installed. Install producer dependencies with "
-                "`python -m pip install -r requirements.txt`."
-            ) from _AIOKAFKA_IMPORT_ERROR
-
         producer = AIOKafkaProducer(
             bootstrap_servers=self._config.bootstrap_servers,
             client_id=self._config.client_id,

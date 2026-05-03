@@ -6,17 +6,11 @@ import logging
 import signal
 from typing import Any
 
+import websockets
+
 from producers.config import ProducerConfig
 from producers.event_router import EventRoutingError, route_binance_message
 from producers.kafka_producer import MarketKafkaProducer
-
-try:
-    import websockets
-except ImportError as exc:  # pragma: no cover - exercised when dependencies are missing.
-    websockets = None  # type: ignore[assignment]
-    _WEBSOCKETS_IMPORT_ERROR = exc
-else:
-    _WEBSOCKETS_IMPORT_ERROR = None
 
 
 logger = logging.getLogger(__name__)
@@ -75,12 +69,6 @@ def configure_logging(level: str) -> None:
 
 
 async def run_producer(config: ProducerConfig) -> None:
-    if websockets is None:
-        raise RuntimeError(
-            "websockets is not installed. Install producer dependencies with "
-            "`python -m pip install -r requirements.txt`."
-        ) from _WEBSOCKETS_IMPORT_ERROR
-
     stop_event = asyncio.Event()
     register_shutdown_signals(stop_event)
 
