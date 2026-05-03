@@ -10,7 +10,7 @@ endif
 KAFKA_INTERNAL_BOOTSTRAP_SERVERS ?= kafka:9092
 KAFKA_TOPICS_BIN ?= /opt/kafka/bin/kafka-topics.sh
 
-.PHONY: help install-producer producer up down restart ps logs topics topics-list topics-describe smoke-test
+.PHONY: help setup-venv install-producer producer test up down restart ps logs topics topics-list topics-describe smoke-test
 
 help:
 	@printf "Real-Time Crypto Market Intelligence Pipeline\n\n"
@@ -25,14 +25,22 @@ help:
 	@printf "  make topics-describe  Describe Kafka topics\n"
 	@printf "  make smoke-test       Verify Kafka is reachable and topics exist\n"
 	@printf "\nProducer targets:\n"
-	@printf "  make install-producer Install Python producer dependencies\n"
+	@printf "  make setup-venv       Create/update .venv and install dependencies\n"
+	@printf "  make install-producer Install Python producer dependencies in the active interpreter\n"
 	@printf "  make producer         Run the Binance WebSocket producer\n"
+	@printf "  make test             Run Python tests\n"
+
+setup-venv:
+	bash scripts/setup_venv.sh
 
 install-producer:
 	$(PYTHON) -m pip install -r requirements.txt
 
 producer:
 	$(PYTHON) -m producers.binance_ws_producer
+
+test:
+	$(PYTHON) -m pytest
 
 up:
 	docker compose up -d

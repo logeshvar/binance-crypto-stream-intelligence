@@ -56,9 +56,8 @@ Important variables:
 Install dependencies:
 
 ```bash
-python -m venv .venv
+make setup-venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 ```
 
 Start Kafka and create topics:

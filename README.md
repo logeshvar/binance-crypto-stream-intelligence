@@ -91,17 +91,15 @@ make topics-list
 Install and run the producer:
 
 ```bash
-python -m venv .venv
+make setup-venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 python -m producers.binance_ws_producer
 ```
 
-Or with Make after activating your virtual environment:
+Or run through Make with the virtualenv interpreter:
 
 ```bash
-make install-producer
-make producer
+make producer PYTHON=.venv/bin/python
 ```
 
 ## Repository Layout
