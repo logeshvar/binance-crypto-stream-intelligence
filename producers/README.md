@@ -16,8 +16,11 @@ No API key, private account stream, or trading endpoint is used.
 Binance combined WebSocket stream
   -> event router
   -> normalized JSON payload
+  -> business validation
   -> Kafka topic keyed by symbol
 ```
+
+Malformed, unroutable, or business-invalid payloads are published to `market.events.invalid`.
 
 ## Topic Routing
 
@@ -84,5 +87,6 @@ http://localhost:8080
 - Uses Binance combined streams to keep all configured market streams on one connection.
 - Publishes Kafka messages with `symbol` as the key to preserve per-symbol ordering.
 - Adds Kafka headers for source, schema version, and event type.
+- Routes malformed, unroutable, and business-invalid payloads to `market.events.invalid`.
 - Reconnects with exponential backoff after WebSocket failures.
 - Logs connection events, publish counts, reconnect counts, and route failures as JSON lines.

@@ -18,6 +18,7 @@ Crypto markets generate continuous, high-frequency trade and price events across
 - JSON Schema contracts for raw market events, invalid events, and alerts
 - Kafka topic design documentation
 - Async Binance WebSocket producer for trade, kline, and ticker streams
+- Producer-side validation and invalid-event publishing to `market.events.invalid`
 
 ## Architecture
 
@@ -140,6 +141,7 @@ make producer PYTHON=.venv/bin/python
 │   └── checkpoints/
 └── docs/
     ├── architecture.md
+    ├── data_quality.md
     ├── kafka_design.md
     └── schema_contracts.md
 ```
@@ -147,6 +149,7 @@ make producer PYTHON=.venv/bin/python
 ## Design Docs
 
 - [Architecture](docs/architecture.md)
+- [Data quality](docs/data_quality.md)
 - [Kafka design](docs/kafka_design.md)
 - [Schema contracts](docs/schema_contracts.md)
 

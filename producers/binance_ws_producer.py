@@ -9,8 +9,17 @@ from typing import Any
 import websockets
 
 from producers.config import ProducerConfig
+from producers.dlq_publisher import (
+    JSON_DECODE_ERROR,
+    ROUTING_ERROR,
+    VALIDATION_ERROR,
+    DlqPublisher,
+    infer_source_topic,
+    infer_symbol,
+)
 from producers.event_router import EventRoutingError, route_binance_message
 from producers.kafka_producer import MarketKafkaProducer
+from producers.validators import ValidationError, validate_market_event
 
 
 logger = logging.getLogger(__name__)
@@ -74,6 +83,7 @@ async def run_producer(config: ProducerConfig) -> None:
 
     kafka_producer = MarketKafkaProducer(config)
     await kafka_producer.start()
+    dlq_publisher = DlqPublisher(config, kafka_producer)
 
     reconnect_count = 0
     delay_seconds = config.reconnect_initial_delay_seconds
@@ -103,7 +113,42 @@ async def run_producer(config: ProducerConfig) -> None:
                             break
                         try:
                             routed_event = route_binance_message(message, config)
-                        except (EventRoutingError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+                            validate_market_event(routed_event.value).raise_for_errors()
+                        except json.JSONDecodeError as exc:
+                            await dlq_publisher.publish_invalid_event(
+                                raw_payload=message,
+                                source_topic=infer_source_topic(message, config),
+                                error_type=JSON_DECODE_ERROR,
+                                error_message=str(exc),
+                                symbol=infer_symbol(message),
+                            )
+                            logger.exception("binance_message_json_decode_failed")
+                            continue
+                        except ValidationError as exc:
+                            await dlq_publisher.publish_invalid_event(
+                                raw_payload=message,
+                                source_topic=routed_event.topic,
+                                error_type=VALIDATION_ERROR,
+                                error_message=str(exc),
+                                symbol=routed_event.key,
+                            )
+                            logger.warning(
+                                "binance_message_validation_failed",
+                                extra={
+                                    "topic": routed_event.topic,
+                                    "symbol": routed_event.key,
+                                    "error_message": str(exc),
+                                },
+                            )
+                            continue
+                        except (EventRoutingError, KeyError, TypeError, ValueError) as exc:
+                            await dlq_publisher.publish_invalid_event(
+                                raw_payload=message,
+                                source_topic=infer_source_topic(message, config),
+                                error_type=ROUTING_ERROR,
+                                error_message=str(exc),
+                                symbol=infer_symbol(message),
+                            )
                             logger.exception("binance_message_route_failed")
                             continue
 
