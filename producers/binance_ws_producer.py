@@ -14,9 +14,8 @@ from producers.dlq_publisher import (
     ROUTING_ERROR,
     VALIDATION_ERROR,
     DlqPublisher,
-    infer_source_topic,
-    infer_symbol,
 )
+from producers.error_context import infer_source_topic, infer_symbol
 from producers.event_router import EventRoutingError, route_binance_message
 from producers.kafka_producer import MarketKafkaProducer
 from producers.validators import ValidationError, validate_market_event

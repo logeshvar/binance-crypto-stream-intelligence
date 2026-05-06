@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from producers.config import ProducerConfig
 from producers.event_router import RoutedEvent, utc_now_iso
+from producers.error_context import UNKNOWN_SOURCE_TOPIC, stringify_raw_payload
 from producers.kafka_producer import MarketKafkaProducer
 
 
@@ -13,7 +13,6 @@ JSON_DECODE_ERROR = "JSON_DECODE_ERROR"
 SCHEMA_ERROR = "SCHEMA_ERROR"
 ROUTING_ERROR = "ROUTING_ERROR"
 PRODUCER_ERROR = "PRODUCER_ERROR"
-UNKNOWN_SOURCE_TOPIC = "unknown"
 
 
 class DlqPublisher:
@@ -75,45 +74,3 @@ def build_invalid_event(
     if symbol:
         event["symbol"] = symbol
     return event
-
-
-def stringify_raw_payload(raw_payload: str | bytes) -> str:
-    if isinstance(raw_payload, bytes):
-        return raw_payload.decode("utf-8", errors="replace")
-    return raw_payload
-
-
-def infer_source_topic(raw_payload: str | bytes, config: ProducerConfig) -> str:
-    try:
-        envelope = json.loads(stringify_raw_payload(raw_payload))
-    except json.JSONDecodeError:
-        return UNKNOWN_SOURCE_TOPIC
-
-    payload = envelope.get("data", envelope) if isinstance(envelope, dict) else None
-    if not isinstance(payload, dict):
-        return UNKNOWN_SOURCE_TOPIC
-
-    event_type = payload.get("e")
-    if event_type == "trade":
-        return config.topic_trades_raw
-    if event_type == "kline":
-        return config.topic_klines_raw
-    if event_type == "24hrTicker":
-        return config.topic_tickers_raw
-    return UNKNOWN_SOURCE_TOPIC
-
-
-def infer_symbol(raw_payload: str | bytes) -> str | None:
-    try:
-        envelope = json.loads(stringify_raw_payload(raw_payload))
-    except json.JSONDecodeError:
-        return None
-
-    payload = envelope.get("data", envelope) if isinstance(envelope, dict) else None
-    if not isinstance(payload, dict):
-        return None
-
-    symbol = payload.get("s")
-    if symbol is None:
-        return None
-    return str(symbol).upper()
