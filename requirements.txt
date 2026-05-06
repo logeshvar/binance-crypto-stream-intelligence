@@ -1,4 +1,6 @@
 aiokafka>=0.10,<1.0
+delta-spark>=3.2,<5
 jsonschema>=4,<5
+pyspark>=3.5,<5
 pytest>=8,<9
 websockets>=12,<16

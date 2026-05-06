@@ -16,6 +16,8 @@ storage/gold/*
 !storage/gold/.gitkeep
 storage/checkpoints/*
 !storage/checkpoints/.gitkeep
+storage/spark/*
+!storage/spark/.gitkeep
 
 # Local runtime files
 *.log

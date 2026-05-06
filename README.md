@@ -8,7 +8,7 @@ This project is not a trading bot, does not execute trades, and does not provide
 
 Crypto markets generate continuous, high-frequency trade and price events across many assets. Raw WebSocket payloads are semi-structured and not immediately suitable for analytics, monitoring, or dashboarding. This project builds a production-style streaming pipeline that validates, routes, stores, deduplicates, aggregates, and serves those events as market intelligence outputs.
 
-## Implemented Foundation
+## Core Components
 
 - Local Kafka broker using Docker Compose
 - Kafka UI for topic inspection
@@ -19,6 +19,7 @@ Crypto markets generate continuous, high-frequency trade and price events across
 - Kafka topic design documentation
 - Async Binance WebSocket producer for trade, kline, and ticker streams
 - Producer-side validation and invalid-event publishing to `market.events.invalid`
+- Bronze Structured Streaming jobs that preserve Kafka metadata in Delta Lake
 
 ## Architecture
 
@@ -58,6 +59,7 @@ Prerequisites:
 
 - Docker Desktop or compatible Docker runtime
 - Docker Compose v2
+- Python 3.11+
 - Bash
 
 Run the local stack:
@@ -103,6 +105,15 @@ Or run through Make with the virtualenv interpreter:
 make producer PYTHON=.venv/bin/python
 ```
 
+Run a Bronze stream:
+
+```bash
+make bronze-trades PYTHON=.venv/bin/python
+```
+
+Bronze Delta outputs are written under `./storage/bronze`. Checkpoints are written under `./storage/checkpoints/bronze`.
+Local Spark jobs use the virtualenv PySpark runtime by default so an unrelated machine-level `SPARK_HOME` does not leak into the project.
+
 ## Repository Layout
 
 ```text
@@ -128,6 +139,11 @@ make producer PYTHON=.venv/bin/python
 │   └── trade_event_v1.json
 ├── streaming/
 │   ├── bronze/
+│   │   ├── bronze_invalid_events.py
+│   │   ├── bronze_klines.py
+│   │   ├── bronze_tickers.py
+│   │   ├── bronze_trades.py
+│   │   └── common.py
 │   ├── silver/
 │   ├── gold/
 │   └── alerts/
@@ -138,7 +154,8 @@ make producer PYTHON=.venv/bin/python
 │   ├── bronze/
 │   ├── silver/
 │   ├── gold/
-│   └── checkpoints/
+│   ├── checkpoints/
+│   └── spark/
 └── docs/
     ├── architecture.md
     ├── data_quality.md

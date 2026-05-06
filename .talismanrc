@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: .env.example
-  checksum: d7f57ff1707191dfe25ed47e0c3fdd4d0e6677044d88bbcf9db61a66037cdc2f
+  checksum: 4d174dd55916612aec9bf233220221d1c5fdc8f5534da691f23917e4fac96e90
 - filename: kafka/topic_config.yaml
   checksum: bc3433548cab0b67fd54ea37b759c903370665d5d5b513b01fef5f990eda3429
 - filename: docs/architecture.md
@@ -22,7 +22,7 @@ fileignoreconfig:
 - filename: producers/event_router.py
   checksum: 3485dbaf54d3d3da775799e038ba8afd69beb1e9f01b2327b92608cf8baae1b5
 - filename: scripts/setup_venv.sh
-  checksum: 28809ab4cb5f10830327b0f7497f932eef618c5682d93d397ddbb9e44e991ec0
+  checksum: 084be475604897d6949a13c18e1f4a9cf1afe7a7a415d68cc759d79ab63cc6e8
 - filename: producers/dlq_publisher.py
   checksum: 918018a7f1783cb12ae66cb3aaf327686e12e0984e200f1cbdb67369de019c39
 version: ""

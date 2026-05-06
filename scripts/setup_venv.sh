@@ -28,10 +28,14 @@ fi
 "${VENV_DIR}/bin/python" -m pip install -r requirements.txt
 "${VENV_DIR}/bin/python" - <<'PY'
 import aiokafka
+import delta
+import pyspark
 import websockets
 
-print("Producer dependencies verified:")
+print("Project dependencies verified:")
 print(f"  aiokafka={aiokafka.__version__}")
+print(f"  delta-spark={delta.__version__}")
+print(f"  pyspark={pyspark.__version__}")
 print(f"  websockets={websockets.__version__}")
 PY
 

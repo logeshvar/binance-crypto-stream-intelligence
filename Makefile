@@ -10,7 +10,7 @@ endif
 KAFKA_INTERNAL_BOOTSTRAP_SERVERS ?= kafka:9092
 KAFKA_TOPICS_BIN ?= /opt/kafka/bin/kafka-topics.sh
 
-.PHONY: help setup-venv install-producer producer test up down restart ps logs topics topics-list topics-describe smoke-test
+.PHONY: help setup-venv install-producer producer test bronze-trades bronze-klines bronze-tickers bronze-invalid-events up down restart ps logs topics topics-list topics-describe smoke-test
 
 help:
 	@printf "Real-Time Crypto Market Intelligence Pipeline\n\n"
@@ -29,6 +29,11 @@ help:
 	@printf "  make install-producer Install Python producer dependencies in the active interpreter\n"
 	@printf "  make producer         Run the Binance WebSocket producer\n"
 	@printf "  make test             Run Python tests\n"
+	@printf "\nBronze streaming targets:\n"
+	@printf "  make bronze-trades          Run raw trades Bronze stream\n"
+	@printf "  make bronze-klines          Run raw klines Bronze stream\n"
+	@printf "  make bronze-tickers         Run raw tickers Bronze stream\n"
+	@printf "  make bronze-invalid-events  Run invalid-events Bronze stream\n"
 
 setup-venv:
 	bash scripts/setup_venv.sh
@@ -41,6 +46,18 @@ producer:
 
 test:
 	$(PYTHON) -m pytest
+
+bronze-trades:
+	$(PYTHON) -m streaming.bronze.bronze_trades
+
+bronze-klines:
+	$(PYTHON) -m streaming.bronze.bronze_klines
+
+bronze-tickers:
+	$(PYTHON) -m streaming.bronze.bronze_tickers
+
+bronze-invalid-events:
+	$(PYTHON) -m streaming.bronze.bronze_invalid_events
 
 up:
 	docker compose up -d
