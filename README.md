@@ -161,18 +161,11 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 ├── streaming/
 │   ├── bronze/
 │   │   ├── bronze_all.py
-│   │   ├── bronze_invalid_events.py
-│   │   ├── bronze_klines.py
-│   │   ├── bronze_tickers.py
-│   │   ├── bronze_trades.py
 │   │   └── common.py
 │   ├── silver/
 │   │   ├── common.py
 │   │   ├── schemas.py
 │   │   ├── silver_all.py
-│   │   ├── silver_klines.py
-│   │   ├── silver_tickers.py
-│   │   ├── silver_trades.py
 │   │   └── transformations.py
 │   ├── gold/
 │   └── alerts/
