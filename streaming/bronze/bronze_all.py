@@ -2,20 +2,21 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 
-from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.streaming import StreamingQuery
 
 from streaming.bronze.common import (
     BronzeJobConfig,
-    read_kafka_stream,
     select_bronze_columns,
-    write_bronze_stream,
 )
 from streaming.spark_session import create_spark_session
 
 
 LOGGER = logging.getLogger(__name__)
+COMBINED_QUERY_NAME = "bronze_market_raw_all"
 
 
 def build_configs() -> list[BronzeJobConfig]:
@@ -51,12 +52,71 @@ def build_configs() -> list[BronzeJobConfig]:
     ]
 
 
-def start_query(config: BronzeJobConfig, spark: SparkSession) -> StreamingQuery:
-    kafka_df = read_kafka_stream(spark, config)
+def read_combined_kafka_stream(spark: SparkSession, configs: list[BronzeJobConfig]) -> DataFrame:
+    first_config = configs[0]
+    topics = ",".join(config.topic for config in configs)
+    reader = (
+        spark.readStream.format("kafka")
+        .option("kafka.bootstrap.servers", first_config.kafka_bootstrap_servers)
+        .option("subscribe", topics)
+        .option("startingOffsets", first_config.starting_offsets)
+        .option("failOnDataLoss", first_config.fail_on_data_loss)
+    )
+
+    if first_config.max_offsets_per_trigger:
+        reader = reader.option("maxOffsetsPerTrigger", first_config.max_offsets_per_trigger)
+
+    return reader.load()
+
+
+def write_topic_batch(batch_df: DataFrame, batch_id: int, configs: list[BronzeJobConfig]) -> None:
+    if batch_df.isEmpty():
+        return
+
+    batch_df.persist()
+    try:
+        for config in configs:
+            topic_df = batch_df.filter(F.col("topic") == config.topic)
+            if topic_df.isEmpty():
+                continue
+
+            (
+                topic_df.write.format("delta")
+                .mode("append")
+                .option("txnAppId", f"{COMBINED_QUERY_NAME}_{config.table_name}")
+                .option("txnVersion", batch_id)
+                .partitionBy("process_date")
+                .save(config.output_path)
+            )
+            LOGGER.info(
+                "Wrote Bronze batch=%s topic=%s table=%s",
+                batch_id,
+                config.topic,
+                config.table_name,
+            )
+    finally:
+        batch_df.unpersist()
+
+
+def start_combined_query(configs: list[BronzeJobConfig], spark: SparkSession) -> StreamingQuery:
+    first_config = configs[0]
+    checkpoint_root = Path(os.getenv("CHECKPOINT_ROOT", "./storage/checkpoints"))
+    checkpoint_path = str(checkpoint_root / "bronze/all")
+
+    kafka_df = read_combined_kafka_stream(spark, configs)
     bronze_df = select_bronze_columns(kafka_df)
-    query = write_bronze_stream(bronze_df, config)
-    LOGGER.info("Started Bronze stream query=%s topic=%s", config.table_name, config.topic)
-    return query
+    writer = (
+        bronze_df.writeStream.queryName(COMBINED_QUERY_NAME)
+        .option("checkpointLocation", checkpoint_path)
+        .foreachBatch(lambda batch_df, batch_id: write_topic_batch(batch_df, batch_id, configs))
+    )
+
+    if first_config.trigger_processing_time:
+        writer = writer.trigger(processingTime=first_config.trigger_processing_time)
+
+    topics = ",".join(config.topic for config in configs)
+    LOGGER.info("Starting combined Bronze stream query=%s topics=%s", COMBINED_QUERY_NAME, topics)
+    return writer.start()
 
 
 def main() -> None:
@@ -67,15 +127,13 @@ def main() -> None:
     spark = create_spark_session("bronze-market-raw-all")
     spark.sparkContext.setLogLevel(os.getenv("SPARK_LOG_LEVEL", "WARN"))
 
-    queries: list[StreamingQuery] = []
+    query: StreamingQuery | None = None
     try:
-        for config in configs:
-            queries.append(start_query(config, spark))
+        query = start_combined_query(configs, spark)
         spark.streams.awaitAnyTermination()
     finally:
-        for query in queries:
-            if query.isActive:
-                query.stop()
+        if query and query.isActive:
+            query.stop()
         spark.stop()
 
 
