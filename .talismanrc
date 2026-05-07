@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: .env.example
-  checksum: 4d174dd55916612aec9bf233220221d1c5fdc8f5534da691f23917e4fac96e90
+  checksum: 7c89687480314b034aee5b2b1736931733db7cd22e205f461e39bca5369f55c7
 - filename: kafka/topic_config.yaml
   checksum: bc3433548cab0b67fd54ea37b759c903370665d5d5b513b01fef5f990eda3429
 - filename: docs/architecture.md
@@ -25,4 +25,6 @@ fileignoreconfig:
   checksum: 084be475604897d6949a13c18e1f4a9cf1afe7a7a415d68cc759d79ab63cc6e8
 - filename: producers/dlq_publisher.py
   checksum: 918018a7f1783cb12ae66cb3aaf327686e12e0984e200f1cbdb67369de019c39
+- filename: tests/spark_bronze_fixtures.py
+  checksum: ece828048e7550ae3a1fcda94102166aae91a74354140819601d20aaacc27162
 version: ""

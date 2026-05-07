@@ -114,6 +114,16 @@ make bronze-trades PYTHON=.venv/bin/python
 Bronze Delta outputs are written under `./storage/bronze`. Checkpoints are written under `./storage/checkpoints/bronze`.
 Local Spark jobs use the virtualenv PySpark runtime by default so an unrelated machine-level `SPARK_HOME` does not leak into the project.
 
+Run a Silver stream after the matching Bronze stream has created data:
+
+```bash
+make silver-trades PYTHON=.venv/bin/python
+make silver-klines PYTHON=.venv/bin/python
+make silver-tickers PYTHON=.venv/bin/python
+```
+
+Silver Delta outputs are written under `./storage/silver`. Checkpoints are written under `./storage/checkpoints/silver`.
+
 Inspect Delta tables in JupyterLab:
 
 ```bash
@@ -154,6 +164,12 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 │   │   ├── bronze_trades.py
 │   │   └── common.py
 │   ├── silver/
+│   │   ├── common.py
+│   │   ├── schemas.py
+│   │   ├── silver_klines.py
+│   │   ├── silver_tickers.py
+│   │   ├── silver_trades.py
+│   │   └── transformations.py
 │   ├── gold/
 │   └── alerts/
 ├── sinks/

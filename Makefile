@@ -10,7 +10,7 @@ endif
 KAFKA_INTERNAL_BOOTSTRAP_SERVERS ?= kafka:9092
 KAFKA_TOPICS_BIN ?= /opt/kafka/bin/kafka-topics.sh
 
-.PHONY: help setup-venv install-producer producer test bronze-trades bronze-klines bronze-tickers bronze-invalid-events up down restart ps logs topics topics-list topics-describe smoke-test
+.PHONY: help setup-venv install-producer producer test bronze-trades bronze-klines bronze-tickers bronze-invalid-events silver-trades silver-klines silver-tickers up down restart ps logs topics topics-list topics-describe smoke-test
 
 help:
 	@printf "Real-Time Crypto Market Intelligence Pipeline\n\n"
@@ -34,6 +34,10 @@ help:
 	@printf "  make bronze-klines          Run raw klines Bronze stream\n"
 	@printf "  make bronze-tickers         Run raw tickers Bronze stream\n"
 	@printf "  make bronze-invalid-events  Run invalid-events Bronze stream\n"
+	@printf "\nSilver streaming targets:\n"
+	@printf "  make silver-trades          Run typed trades Silver stream\n"
+	@printf "  make silver-klines          Run typed klines Silver stream\n"
+	@printf "  make silver-tickers         Run typed tickers Silver stream\n"
 
 setup-venv:
 	bash scripts/setup_venv.sh
@@ -58,6 +62,15 @@ bronze-tickers:
 
 bronze-invalid-events:
 	$(PYTHON) -m streaming.bronze.bronze_invalid_events
+
+silver-trades:
+	$(PYTHON) -m streaming.silver.silver_trades
+
+silver-klines:
+	$(PYTHON) -m streaming.silver.silver_klines
+
+silver-tickers:
+	$(PYTHON) -m streaming.silver.silver_tickers
 
 up:
 	docker compose up -d
