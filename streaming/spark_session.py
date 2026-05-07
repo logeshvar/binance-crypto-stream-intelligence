@@ -39,6 +39,8 @@ def resolve_spark_extra_packages() -> list[str]:
 
 def create_spark_session(app_name: str) -> SparkSession:
     ivy_dir = prepare_pyspark_environment()
+    spark_ui_enabled = os.getenv("SPARK_UI_ENABLED", "true")
+    spark_ui_port = os.getenv("SPARK_UI_PORT")
 
     builder = (
         SparkSession.builder.appName(app_name)
@@ -47,7 +49,11 @@ def create_spark_session(app_name: str) -> SparkSession:
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
         .config("spark.sql.shuffle.partitions", os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "4"))
         .config("spark.jars.ivy", str(ivy_dir))
+        .config("spark.ui.enabled", spark_ui_enabled)
     )
+    if spark_ui_port:
+        builder = builder.config("spark.ui.port", spark_ui_port)
+
     return configure_spark_with_delta_pip(
         builder,
         extra_packages=resolve_spark_extra_packages(),

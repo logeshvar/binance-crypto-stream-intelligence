@@ -10,7 +10,7 @@ endif
 KAFKA_INTERNAL_BOOTSTRAP_SERVERS ?= kafka:9092
 KAFKA_TOPICS_BIN ?= /opt/kafka/bin/kafka-topics.sh
 
-.PHONY: help setup-venv install-producer producer test bronze-trades bronze-klines bronze-tickers bronze-invalid-events silver-trades silver-klines silver-tickers up down restart ps logs topics topics-list topics-describe smoke-test
+.PHONY: help setup-venv install-producer producer test bronze bronze-all bronze-trades bronze-klines bronze-tickers bronze-invalid-events silver silver-all silver-trades silver-klines silver-tickers up down restart ps logs topics topics-list topics-describe smoke-test
 
 help:
 	@printf "Real-Time Crypto Market Intelligence Pipeline\n\n"
@@ -30,11 +30,13 @@ help:
 	@printf "  make producer         Run the Binance WebSocket producer\n"
 	@printf "  make test             Run Python tests\n"
 	@printf "\nBronze streaming targets:\n"
+	@printf "  make bronze-all             Run all Bronze streams in one Spark app\n"
 	@printf "  make bronze-trades          Run raw trades Bronze stream\n"
 	@printf "  make bronze-klines          Run raw klines Bronze stream\n"
 	@printf "  make bronze-tickers         Run raw tickers Bronze stream\n"
 	@printf "  make bronze-invalid-events  Run invalid-events Bronze stream\n"
 	@printf "\nSilver streaming targets:\n"
+	@printf "  make silver-all             Run all Silver streams in one Spark app\n"
 	@printf "  make silver-trades          Run typed trades Silver stream\n"
 	@printf "  make silver-klines          Run typed klines Silver stream\n"
 	@printf "  make silver-tickers         Run typed tickers Silver stream\n"
@@ -51,6 +53,11 @@ producer:
 test:
 	$(PYTHON) -m pytest
 
+bronze: bronze-all
+
+bronze-all:
+	$(PYTHON) -m streaming.bronze.bronze_all
+
 bronze-trades:
 	$(PYTHON) -m streaming.bronze.bronze_trades
 
@@ -62,6 +69,11 @@ bronze-tickers:
 
 bronze-invalid-events:
 	$(PYTHON) -m streaming.bronze.bronze_invalid_events
+
+silver: silver-all
+
+silver-all:
+	$(PYTHON) -m streaming.silver.silver_all
 
 silver-trades:
 	$(PYTHON) -m streaming.silver.silver_trades

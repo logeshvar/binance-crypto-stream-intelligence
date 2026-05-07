@@ -91,6 +91,8 @@ make topics
 make topics-list
 ```
 
+Kafka broker data is stored in a named Docker volume, so ordinary `docker compose down` and `docker compose up -d` cycles keep topics, committed offsets, and retained messages. Removing volumes with `docker compose down -v` intentionally resets Kafka state.
+
 Install and run the producer:
 
 ```bash
@@ -108,21 +110,21 @@ make producer PYTHON=.venv/bin/python
 Run a Bronze stream:
 
 ```bash
-make bronze-trades PYTHON=.venv/bin/python
+make bronze-all PYTHON=.venv/bin/python
 ```
 
 Bronze Delta outputs are written under `./storage/bronze`. Checkpoints are written under `./storage/checkpoints/bronze`.
 Local Spark jobs use the virtualenv PySpark runtime by default so an unrelated machine-level `SPARK_HOME` does not leak into the project.
+The grouped Bronze runner starts trades, klines, tickers, and invalid-events queries inside one Spark application. Its Spark UI defaults to `http://localhost:4040`.
 
 Run a Silver stream after the matching Bronze stream has created data:
 
 ```bash
-make silver-trades PYTHON=.venv/bin/python
-make silver-klines PYTHON=.venv/bin/python
-make silver-tickers PYTHON=.venv/bin/python
+make silver-all PYTHON=.venv/bin/python
 ```
 
 Silver Delta outputs are written under `./storage/silver`. Checkpoints are written under `./storage/checkpoints/silver`.
+The grouped Silver runner starts trades, klines, and tickers queries inside one Spark application. Its Spark UI defaults to `http://localhost:4050`.
 
 Inspect Delta tables in JupyterLab:
 
@@ -158,6 +160,7 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 │   └── trade_event_v1.json
 ├── streaming/
 │   ├── bronze/
+│   │   ├── bronze_all.py
 │   │   ├── bronze_invalid_events.py
 │   │   ├── bronze_klines.py
 │   │   ├── bronze_tickers.py
@@ -166,6 +169,7 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 │   ├── silver/
 │   │   ├── common.py
 │   │   ├── schemas.py
+│   │   ├── silver_all.py
 │   │   ├── silver_klines.py
 │   │   ├── silver_tickers.py
 │   │   ├── silver_trades.py
