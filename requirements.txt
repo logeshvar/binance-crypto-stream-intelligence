@@ -1,6 +1,11 @@
 aiokafka>=0.10,<1.0
 delta-spark>=3.2,<5
+ipykernel>=6,<8
+ipywidgets>=8,<9
+jinja2>=3,<4
+jupyterlab>=4,<5
 jsonschema>=4,<5
+pandas>=2,<3
 pyspark>=3.5,<5
 pytest>=8,<9
 websockets>=12,<16

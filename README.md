@@ -114,6 +114,15 @@ make bronze-trades PYTHON=.venv/bin/python
 Bronze Delta outputs are written under `./storage/bronze`. Checkpoints are written under `./storage/checkpoints/bronze`.
 Local Spark jobs use the virtualenv PySpark runtime by default so an unrelated machine-level `SPARK_HOME` does not leak into the project.
 
+Inspect Delta tables in JupyterLab:
+
+```bash
+.venv/bin/python -m ipykernel install --user --name crypto-market-intelligence --display-name "Crypto Market Intelligence (.venv)"
+.venv/bin/jupyter lab
+```
+
+Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intelligence (.venv)` kernel.
+
 ## Repository Layout
 
 ```text
@@ -149,6 +158,8 @@ Local Spark jobs use the virtualenv PySpark runtime by default so an unrelated m
 │   └── alerts/
 ├── sinks/
 ├── dashboards/
+├── notebooks/
+│   └── inspect_delta_tables.ipynb
 ├── tests/
 ├── storage/
 │   ├── bronze/

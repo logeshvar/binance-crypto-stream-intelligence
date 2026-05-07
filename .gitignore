@@ -6,6 +6,8 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
 
 # Local data lake output
 storage/bronze/*
