@@ -22,6 +22,7 @@ Crypto markets generate continuous, high-frequency trade and price events across
 - Bronze Structured Streaming jobs that preserve Kafka metadata in Delta Lake
 - Silver Structured Streaming jobs that normalize and deduplicate market events
 - Gold Structured Streaming jobs that compute OHLC, volatility, volume spikes, price movement alerts, and watchlist summaries
+- Alert publishers that convert Gold signals into Kafka alert events
 
 ## Architecture
 
@@ -137,6 +138,19 @@ make gold-all PYTHON=.venv/bin/python
 Gold Delta outputs are written under `./storage/gold`. Checkpoints are written under `./storage/checkpoints/gold`.
 The grouped Gold runner starts OHLC, trade summary, volatility, volume spike, price movement alert, and watchlist summary queries inside one Spark application. Its Spark UI defaults to `http://localhost:4060`.
 
+Publish Gold alerts back to Kafka:
+
+```bash
+make alerts-volume PYTHON=.venv/bin/python
+make alerts-price PYTHON=.venv/bin/python
+```
+
+Alert publisher checkpoints are written under `./storage/checkpoints/alerts`. Alert events are published to `market.signals.alerts` and can be inspected in Kafka UI or from the terminal:
+
+```bash
+make alerts-consume
+```
+
 Inspect Delta tables in JupyterLab:
 
 ```bash
@@ -188,7 +202,11 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 │   │   ├── gold_volume_spikes.py
 │   │   └── gold_watchlist_summary.py
 │   └── alerts/
+│       ├── common.py
+│       ├── publish_price_alerts.py
+│       └── publish_volume_alerts.py
 ├── sinks/
+│   └── alert_kafka_writer.py
 ├── dashboards/
 ├── notebooks/
 │   └── inspect_delta_tables.ipynb

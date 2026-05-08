@@ -16,8 +16,7 @@ def classify_price_alert(price_change_pct_col: F.Column) -> F.Column:
 def classify_alert_severity(price_change_pct_col: F.Column) -> F.Column:
     absolute_change = F.abs(price_change_pct_col)
     return (
-        F.when(absolute_change >= F.lit(3.0), F.lit("CRITICAL"))
-        .when(absolute_change >= F.lit(1.5), F.lit("HIGH"))
+        F.when(absolute_change >= F.lit(1.5), F.lit("HIGH"))
         .otherwise(F.lit("LOW"))
     )
 

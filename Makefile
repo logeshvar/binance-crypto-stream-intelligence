@@ -10,7 +10,7 @@ endif
 KAFKA_INTERNAL_BOOTSTRAP_SERVERS ?= kafka:9092
 KAFKA_TOPICS_BIN ?= /opt/kafka/bin/kafka-topics.sh
 
-.PHONY: help setup-venv install-producer producer test bronze bronze-all silver silver-all gold gold-all up down restart ps logs topics topics-list topics-describe smoke-test
+.PHONY: help setup-venv install-producer producer test bronze bronze-all silver silver-all gold gold-all alerts-volume alerts-price alerts-consume up down restart ps logs topics topics-list topics-describe smoke-test
 
 help:
 	@printf "Real-Time Crypto Market Intelligence Pipeline\n\n"
@@ -35,6 +35,10 @@ help:
 	@printf "  make silver-all             Run all Silver streams in one Spark app\n"
 	@printf "\nGold streaming targets:\n"
 	@printf "  make gold-all               Run all Gold analytics streams in one Spark app\n"
+	@printf "\nAlert targets:\n"
+	@printf "  make alerts-volume          Publish volume spike alerts to Kafka\n"
+	@printf "  make alerts-price           Publish price movement alerts to Kafka\n"
+	@printf "  make alerts-consume         Consume alert topic messages from the beginning\n"
 
 setup-venv:
 	bash scripts/setup_venv.sh
@@ -62,6 +66,15 @@ gold: gold-all
 
 gold-all:
 	$(PYTHON) -m streaming.gold.gold_all
+
+alerts-volume:
+	$(PYTHON) -m streaming.alerts.publish_volume_alerts
+
+alerts-price:
+	$(PYTHON) -m streaming.alerts.publish_price_alerts
+
+alerts-consume:
+	bash scripts/consume_alerts.sh
 
 up:
 	docker compose up -d

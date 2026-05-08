@@ -73,6 +73,8 @@ Gold computes market intelligence outputs such as 1-minute OHLC, 5-minute trade 
 | `gold_price_movement_alerts` | `silver_market_trades` | 5-minute price surge/drop detection using event-time open and close prices |
 | `gold_market_watchlist_summary` | `silver_market_trades` | Latest per-window symbol summary for dashboard-style serving |
 
+Alert publishers read Gold signal Delta tables and emit schema-controlled JSON events into `market.signals.alerts`. Kafka alert messages use `symbol` as the key so downstream consumers retain per-symbol ordering.
+
 ## Operational Design
 
 The project is designed around production-style streaming concerns:
@@ -84,6 +86,7 @@ The project is designed around production-style streaming concerns:
 - Spark checkpoint paths per stream
 - Event-time windows and watermarking for stateful aggregations
 - Queryable Delta outputs for dashboard and serving
+- Kafka alert publishing with independent checkpoints per alert stream
 
 ## Run Sequence
 
