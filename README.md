@@ -20,6 +20,8 @@ Crypto markets generate continuous, high-frequency trade and price events across
 - Async Binance WebSocket producer for trade, kline, and ticker streams
 - Producer-side validation and invalid-event publishing to `market.events.invalid`
 - Bronze Structured Streaming jobs that preserve Kafka metadata in Delta Lake
+- Silver Structured Streaming jobs that normalize and deduplicate market events
+- Gold Structured Streaming jobs that compute OHLC, volatility, volume spikes, price movement alerts, and watchlist summaries
 
 ## Architecture
 
@@ -126,6 +128,15 @@ make silver-all PYTHON=.venv/bin/python
 Silver Delta outputs are written under `./storage/silver`. Checkpoints are written under `./storage/checkpoints/silver`.
 The grouped Silver runner starts trades, klines, and tickers queries inside one Spark application. Its Spark UI defaults to `http://localhost:4050`.
 
+Run Gold analytics after `silver_market_trades` has data:
+
+```bash
+make gold-all PYTHON=.venv/bin/python
+```
+
+Gold Delta outputs are written under `./storage/gold`. Checkpoints are written under `./storage/checkpoints/gold`.
+The grouped Gold runner starts OHLC, trade summary, volatility, volume spike, price movement alert, and watchlist summary queries inside one Spark application. Its Spark UI defaults to `http://localhost:4060`.
+
 Inspect Delta tables in JupyterLab:
 
 ```bash
@@ -168,6 +179,14 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 │   │   ├── silver_all.py
 │   │   └── transformations.py
 │   ├── gold/
+│   │   ├── common.py
+│   │   ├── gold_all.py
+│   │   ├── gold_ohlc_1min.py
+│   │   ├── gold_price_alerts.py
+│   │   ├── gold_trade_summary_5min.py
+│   │   ├── gold_volatility_5min.py
+│   │   ├── gold_volume_spikes.py
+│   │   └── gold_watchlist_summary.py
 │   └── alerts/
 ├── sinks/
 ├── dashboards/

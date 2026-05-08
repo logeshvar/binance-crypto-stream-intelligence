@@ -10,7 +10,7 @@ endif
 KAFKA_INTERNAL_BOOTSTRAP_SERVERS ?= kafka:9092
 KAFKA_TOPICS_BIN ?= /opt/kafka/bin/kafka-topics.sh
 
-.PHONY: help setup-venv install-producer producer test bronze bronze-all silver silver-all up down restart ps logs topics topics-list topics-describe smoke-test
+.PHONY: help setup-venv install-producer producer test bronze bronze-all silver silver-all gold gold-all up down restart ps logs topics topics-list topics-describe smoke-test
 
 help:
 	@printf "Real-Time Crypto Market Intelligence Pipeline\n\n"
@@ -33,6 +33,8 @@ help:
 	@printf "  make bronze-all             Run all Bronze streams in one Spark app\n"
 	@printf "\nSilver streaming targets:\n"
 	@printf "  make silver-all             Run all Silver streams in one Spark app\n"
+	@printf "\nGold streaming targets:\n"
+	@printf "  make gold-all               Run all Gold analytics streams in one Spark app\n"
 
 setup-venv:
 	bash scripts/setup_venv.sh
@@ -55,6 +57,11 @@ silver: silver-all
 
 silver-all:
 	$(PYTHON) -m streaming.silver.silver_all
+
+gold: gold-all
+
+gold-all:
+	$(PYTHON) -m streaming.gold.gold_all
 
 up:
 	docker compose up -d

@@ -58,11 +58,20 @@ Market event topics use the crypto symbol as the Kafka message key. This preserv
 
 ## Medallion Plan
 
-Bronze will preserve Kafka metadata and raw payload strings for replay and auditability.
+Bronze preserves Kafka metadata and raw payload strings for replay and auditability.
 
-Silver will parse raw JSON into typed, normalized records, apply business validation, and deduplicate records using stable event identifiers.
+Silver parses raw JSON into typed, normalized records, applies business validation, and deduplicates records using stable event identifiers.
 
-Gold will compute market intelligence outputs such as 1-minute OHLC, 5-minute trade summaries, volatility signals, volume spike signals, price movement alerts, and watchlist summaries.
+Gold computes market intelligence outputs such as 1-minute OHLC, 5-minute trade summaries, volatility signals, volume spike signals, price movement alerts, and watchlist summaries.
+
+| Gold output | Source | Primary logic |
+| --- | --- | --- |
+| `gold_symbol_1min_ohlc` | `silver_market_trades` | 1-minute event-time OHLC, trade count, quantity, and trade value |
+| `gold_symbol_5min_trade_summary` | `silver_market_trades` | 5-minute total volume, number of trades, average/max/min trade value |
+| `gold_symbol_5min_volatility` | `silver_market_trades` | 5-minute price range, standard deviation, movement percentage, volatility level |
+| `gold_volume_spike_signals` | `gold_symbol_5min_trade_summary` | Current 5-minute volume compared with recent completed 5-minute windows |
+| `gold_price_movement_alerts` | `silver_market_trades` | 5-minute price surge/drop detection using event-time open and close prices |
+| `gold_market_watchlist_summary` | `silver_market_trades` | Latest per-window symbol summary for dashboard-style serving |
 
 ## Operational Design
 
