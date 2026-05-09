@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -26,12 +25,11 @@ def get_spark():
 
 
 @st.cache_data(ttl=15)
-def load_dashboard_data(row_limit: int, alert_limit: int):
+def load_market_data(row_limit: int, alert_limit: int):
     spark = get_spark()
     return {
         "overview": queries.overview_metrics(spark),
-        "watchlist": queries.latest_watchlist(spark, row_limit),
-        "ohlc": queries.latest_ohlc(spark, row_limit),
+        "snapshot": queries.market_snapshot(spark, row_limit),
         "volume_spikes": queries.latest_volume_spikes(spark, row_limit),
         "volatility": queries.latest_volatility(spark, row_limit),
         "price_alerts": queries.latest_price_alerts(spark, row_limit),
@@ -45,62 +43,176 @@ def load_dashboard_data(row_limit: int, alert_limit: int):
     }
 
 
+@st.cache_data(ttl=15)
+def load_symbol_data(symbol: str):
+    spark = get_spark()
+    return {
+        "ohlc": queries.symbol_ohlc_history(spark, symbol),
+        "trade_summary": queries.symbol_trade_summary_history(spark, symbol),
+        "spikes": queries.symbol_spike_history(spark, symbol),
+    }
+
+
+def numeric_series(df: pd.DataFrame, column: str) -> pd.Series:
+    return pd.to_numeric(df[column], errors="coerce")
+
+
 def render_dataframe(df: pd.DataFrame, height: int = 420) -> None:
-    st.dataframe(df, use_container_width=True, height=height, hide_index=True)
+    st.dataframe(df, width="stretch", height=height, hide_index=True)
 
 
-def render_overview(data: dict[str, object]) -> None:
+def metric_value(value: object, suffix: str = "") -> str:
+    if value is None or pd.isna(value):
+        return "n/a"
+    if isinstance(value, float):
+        return f"{value:,.2f}{suffix}"
+    return f"{value}{suffix}"
+
+
+def safe_float(value: object) -> float | None:
+    converted = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    return None if pd.isna(converted) else float(converted)
+
+
+def top_row(df: pd.DataFrame, column: str) -> pd.Series | None:
+    if df.empty or column not in df:
+        return None
+    ranked = df.assign(_rank=pd.to_numeric(df[column], errors="coerce")).sort_values("_rank", ascending=False)
+    return ranked.iloc[0] if not ranked.empty else None
+
+
+def render_command_center(data: dict[str, object]) -> None:
     metrics = data["overview"]
+    snapshot = data["snapshot"]
+
+    strongest_spike = top_row(snapshot, "volume_spike_ratio")
+    biggest_move = None
+    if not snapshot.empty:
+        move_rank = snapshot.assign(_abs_move=numeric_series(snapshot, "price_change_5m_pct").abs()).sort_values(
+            "_abs_move", ascending=False
+        )
+        biggest_move = move_rank.iloc[0]
+
     cols = st.columns(5)
-    cols[0].metric("Symbols", metrics["symbols"])
-    cols[1].metric("High Volume Spikes", metrics["high_volume_spikes"])
-    cols[2].metric("Price Alerts", metrics["price_alerts"])
-    cols[3].metric("Freshness", metrics["freshness"])
-    cols[4].metric("Latest Gold Time", str(metrics["latest_gold_time"]) if metrics["latest_gold_time"] else "n/a")
+    cols[0].metric("Active Symbols", metrics["symbols"])
+    cols[1].metric("Strongest Spike", metric_value(metrics["strongest_spike"], "x"))
+    cols[2].metric("Biggest 5m Move", metric_value(metrics["biggest_abs_move"], "%"))
+    cols[3].metric("High Spike Windows", metrics["high_volume_spikes"])
+    cols[4].metric("Gold Freshness", metrics["freshness"])
 
-    watchlist = data["watchlist"]
-    if not watchlist.empty:
-        chart_df = watchlist[["symbol", "price_change_5m_pct"]].set_index("symbol")
-        st.bar_chart(chart_df)
-    render_dataframe(watchlist)
+    left, right = st.columns([1.1, 1])
+    with left:
+        st.subheader("Attention Ranked Symbols")
+        display_cols = [
+            "symbol",
+            "attention_score",
+            "latest_price",
+            "price_change_5m_pct",
+            "volume_5m",
+            "volume_spike_ratio",
+            "signal_strength",
+            "volatility_level",
+            "market_direction",
+            "attention_reason",
+            "last_updated_time",
+        ]
+        render_dataframe(snapshot[[col for col in display_cols if col in snapshot.columns]], height=430)
+
+    with right:
+        st.subheader("Current Leaders")
+        leader_rows = []
+        if strongest_spike is not None:
+            leader_rows.append(
+                {
+                    "signal": "Strongest volume spike",
+                    "symbol": strongest_spike["symbol"],
+                    "value": metric_value(safe_float(strongest_spike.get("volume_spike_ratio")), "x"),
+                }
+            )
+        if biggest_move is not None:
+            leader_rows.append(
+                {
+                    "signal": "Largest 5m price move",
+                    "symbol": biggest_move["symbol"],
+                    "value": metric_value(abs(safe_float(biggest_move.get("price_change_5m_pct")) or 0.0), "%"),
+                }
+            )
+        render_dataframe(pd.DataFrame(leader_rows), height=150)
+
+        if not snapshot.empty:
+            spike_chart = snapshot[["symbol", "volume_spike_ratio"]].dropna().head(12).copy()
+            spike_chart["volume_spike_ratio"] = numeric_series(spike_chart, "volume_spike_ratio")
+            move_chart = snapshot[["symbol", "price_change_5m_pct"]].dropna().head(12).copy()
+            move_chart["price_change_5m_pct"] = numeric_series(move_chart, "price_change_5m_pct")
+            spike_chart = spike_chart.set_index("symbol")
+            move_chart = move_chart.set_index("symbol")
+            st.bar_chart(spike_chart)
+            st.bar_chart(move_chart)
 
 
-def render_watchlist(data: dict[str, object]) -> None:
-    render_dataframe(data["watchlist"])
-    st.divider()
-    render_dataframe(data["ohlc"])
+def render_symbol_drilldown(snapshot: pd.DataFrame, symbol_data: dict[str, pd.DataFrame], selected_symbol: str) -> None:
+    current = snapshot[snapshot["symbol"] == selected_symbol]
+    if not current.empty:
+        row = current.iloc[0]
+        cols = st.columns(5)
+        cols[0].metric("Latest Price", metric_value(safe_float(row.get("latest_price"))))
+        cols[1].metric("5m Move", metric_value(safe_float(row.get("price_change_5m_pct")), "%"))
+        cols[2].metric("5m Volume", metric_value(safe_float(row.get("volume_5m"))))
+        cols[3].metric("Spike Ratio", metric_value(safe_float(row.get("volume_spike_ratio")), "x"))
+        cols[4].metric("Volatility", row.get("volatility_level", "n/a"))
 
+    ohlc = symbol_data["ohlc"]
+    summary = symbol_data["trade_summary"]
+    spikes = symbol_data["spikes"]
 
-def render_volume_spikes(data: dict[str, object]) -> None:
-    spikes = data["volume_spikes"]
-    if not spikes.empty:
-        chart_df = spikes[["symbol", "volume_spike_ratio"]].head(20).set_index("symbol")
-        st.bar_chart(chart_df)
-    render_dataframe(spikes)
+    left, right = st.columns([1.15, 1])
+    with left:
+        st.subheader("1m Close Price")
+        if not ohlc.empty:
+            chart_df = ohlc.copy()
+            chart_df["close_price"] = numeric_series(chart_df, "close_price")
+            st.line_chart(chart_df.set_index("window_end")[["close_price"]])
+        render_dataframe(ohlc.tail(30), height=300)
 
-
-def render_volatility(data: dict[str, object]) -> None:
-    volatility = data["volatility"]
-    if not volatility.empty:
-        chart_df = volatility[["symbol", "price_change_pct"]].head(20).set_index("symbol")
-        st.bar_chart(chart_df)
-    render_dataframe(volatility)
+    with right:
+        st.subheader("5m Volume And Spike Ratio")
+        if not summary.empty:
+            volume_df = summary.copy()
+            volume_df["total_volume"] = numeric_series(volume_df, "total_volume")
+            st.bar_chart(volume_df.set_index("window_end")[["total_volume"]])
+        if not spikes.empty:
+            spike_df = spikes.copy()
+            spike_df["volume_spike_ratio"] = numeric_series(spike_df, "volume_spike_ratio")
+            st.line_chart(spike_df.set_index("window_end")[["volume_spike_ratio"]])
+        render_dataframe(spikes.tail(30), height=300)
 
 
 def render_alerts(data: dict[str, object]) -> None:
-    left, right = st.columns(2)
+    alert_topic = data["alert_topic"]
+    price_alerts = data["price_alerts"]
+
+    if not alert_topic.empty:
+        cols = st.columns(4)
+        cols[0].metric("Kafka Alerts", len(alert_topic))
+        cols[1].metric("Symbols Alerted", alert_topic["symbol"].nunique())
+        cols[2].metric("High Severity", int((alert_topic["severity"] == "HIGH").sum()))
+        cols[3].metric("Latest Alert", str(alert_topic["created_at"].max()))
+
+    left, right = st.columns([1.1, 1])
     with left:
-        st.subheader("Gold Price Movement Alerts")
-        render_dataframe(data["price_alerts"], height=360)
+        st.subheader("Kafka Alert History")
+        render_dataframe(alert_topic, height=440)
     with right:
-        st.subheader("Kafka Alert Topic")
-        render_dataframe(data["alert_topic"], height=360)
+        st.subheader("Gold Price Alerts")
+        render_dataframe(price_alerts, height=440)
 
 
 def render_health(data: dict[str, object]) -> None:
     health = data["health"].copy()
     if not health.empty:
         health["freshness"] = health["latest_time"].apply(queries.freshness_label)
+        chart_df = health[["table", "row_count"]].set_index("table")
+        st.bar_chart(chart_df)
     render_dataframe(health)
 
 
@@ -108,35 +220,36 @@ def main() -> None:
     st.title("Crypto Market Intelligence")
 
     with st.sidebar:
-        row_limit = st.slider("Rows", min_value=10, max_value=200, value=50, step=10)
-        alert_limit = st.slider("Alert Rows", min_value=10, max_value=200, value=50, step=10)
-        st.caption(str(Path.cwd()))
+        row_limit = st.slider("Rows", min_value=25, max_value=200, value=100, step=25)
+        alert_limit = st.slider("Alert Rows", min_value=25, max_value=200, value=100, step=25)
         if st.button("Refresh"):
             st.cache_data.clear()
+            st.rerun()
 
-    data = load_dashboard_data(row_limit=row_limit, alert_limit=alert_limit)
+    data = load_market_data(row_limit=row_limit, alert_limit=alert_limit)
+    snapshot = data["snapshot"]
+    symbols = sorted(snapshot["symbol"].dropna().unique().tolist()) if not snapshot.empty else []
 
-    tabs = st.tabs(
-        [
-            "Market Overview",
-            "Symbol Watchlist",
-            "Volume Spikes",
-            "Volatility",
-            "Alerts",
-            "Pipeline Health",
-        ]
+    with st.sidebar:
+        selected_symbol = st.selectbox("Symbol", symbols) if symbols else None
+
+    symbol_data = (
+        load_symbol_data(selected_symbol)
+        if selected_symbol
+        else {"ohlc": pd.DataFrame(), "trade_summary": pd.DataFrame(), "spikes": pd.DataFrame()}
     )
+
+    tabs = st.tabs(["Command Center", "Symbol Drilldown", "Alerts", "Pipeline Health"])
     with tabs[0]:
-        render_overview(data)
+        render_command_center(data)
     with tabs[1]:
-        render_watchlist(data)
+        if selected_symbol:
+            render_symbol_drilldown(snapshot, symbol_data, selected_symbol)
+        else:
+            st.info("No symbols available yet.")
     with tabs[2]:
-        render_volume_spikes(data)
-    with tabs[3]:
-        render_volatility(data)
-    with tabs[4]:
         render_alerts(data)
-    with tabs[5]:
+    with tabs[3]:
         render_health(data)
 
 
