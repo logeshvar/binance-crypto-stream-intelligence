@@ -10,7 +10,7 @@ endif
 KAFKA_INTERNAL_BOOTSTRAP_SERVERS ?= kafka:9092
 KAFKA_TOPICS_BIN ?= /opt/kafka/bin/kafka-topics.sh
 
-.PHONY: help setup-venv install-producer producer test bronze bronze-all silver silver-all gold gold-all alerts-volume alerts-price alerts-consume up down restart ps logs topics topics-list topics-describe smoke-test
+.PHONY: help setup-venv install-producer producer test bronze bronze-all silver silver-all gold gold-all alerts-volume alerts-price alerts-consume dashboard up down restart ps logs topics topics-list topics-describe smoke-test
 
 help:
 	@printf "Real-Time Crypto Market Intelligence Pipeline\n\n"
@@ -39,6 +39,8 @@ help:
 	@printf "  make alerts-volume          Publish volume spike alerts to Kafka\n"
 	@printf "  make alerts-price           Publish price movement alerts to Kafka\n"
 	@printf "  make alerts-consume         Consume alert topic messages from the beginning\n"
+	@printf "\nDashboard targets:\n"
+	@printf "  make dashboard              Run the Streamlit dashboard\n"
 
 setup-venv:
 	bash scripts/setup_venv.sh
@@ -75,6 +77,9 @@ alerts-price:
 
 alerts-consume:
 	bash scripts/consume_alerts.sh
+
+dashboard:
+	$(PYTHON) -m streamlit run dashboards/streamlit_app.py
 
 up:
 	docker compose up -d

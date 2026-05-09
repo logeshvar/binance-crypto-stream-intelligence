@@ -23,6 +23,7 @@ Crypto markets generate continuous, high-frequency trade and price events across
 - Silver Structured Streaming jobs that normalize and deduplicate market events
 - Gold Structured Streaming jobs that compute OHLC, volatility, volume spikes, price movement alerts, and watchlist summaries
 - Alert publishers that convert Gold signals into Kafka alert events
+- Streamlit dashboard for Gold outputs, alert history, and pipeline health
 
 ## Architecture
 
@@ -151,6 +152,14 @@ Alert publisher checkpoints are written under `./storage/checkpoints/alerts`. Al
 make alerts-consume
 ```
 
+Run the dashboard:
+
+```bash
+make dashboard PYTHON=.venv/bin/python
+```
+
+The dashboard reads Gold Delta tables under `./storage/gold` and Kafka alert events from `market.signals.alerts`.
+
 Inspect Delta tables in JupyterLab:
 
 ```bash
@@ -208,6 +217,9 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 ├── sinks/
 │   └── alert_kafka_writer.py
 ├── dashboards/
+│   ├── queries.py
+│   ├── README.md
+│   └── streamlit_app.py
 ├── notebooks/
 │   └── inspect_delta_tables.ipynb
 ├── tests/

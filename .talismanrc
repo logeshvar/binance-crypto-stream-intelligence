@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: .env.example
-  checksum: 0352d2a8feef18e118cb780fbe898d0cafd13a11cf43c1e45f866f5ce4596198
+  checksum: 22f8cbe611208f7cc29bdd88a006c7f96be960ecea0d026ea0a25a8043ca8c04
 - filename: kafka/topic_config.yaml
   checksum: bc3433548cab0b67fd54ea37b759c903370665d5d5b513b01fef5f990eda3429
 - filename: docs/architecture.md
