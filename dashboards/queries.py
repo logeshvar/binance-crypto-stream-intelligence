@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from pyspark.sql import DataFrame, SparkSession, Window
@@ -12,6 +13,15 @@ from pyspark.sql.types import DoubleType, StringType, StructField, StructType
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_GOLD_ROOT = REPO_ROOT / "storage" / "gold"
+DEFAULT_DASHBOARD_TIMEZONE = "Asia/Kolkata"
+
+TIME_RANGE_LABELS = {
+    "today": "Today",
+    "last_week": "Last Week",
+    "last_month": "Last Month",
+    "last_year": "Last Year",
+    "all": "All",
+}
 
 GOLD_TABLE_NAMES = [
     "gold_symbol_1min_ohlc",
@@ -60,7 +70,53 @@ def empty_frame(columns: list[str]) -> pd.DataFrame:
     return pd.DataFrame(columns=columns)
 
 
-def latest_watchlist(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
+def dashboard_timezone() -> ZoneInfo:
+    return ZoneInfo(os.getenv("DASHBOARD_TIMEZONE", DEFAULT_DASHBOARD_TIMEZONE))
+
+
+def time_range_start(range_key: str, now: datetime | None = None, tz: ZoneInfo | None = None) -> datetime | None:
+    if range_key == "all":
+        return None
+
+    dashboard_tz = tz or dashboard_timezone()
+    current_time = now or datetime.now(timezone.utc)
+    if current_time.tzinfo is None:
+        current_time = current_time.replace(tzinfo=timezone.utc)
+    local_now = current_time.astimezone(dashboard_tz)
+
+    if range_key == "today":
+        local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif range_key == "last_week":
+        local_start = local_now - timedelta(days=7)
+    elif range_key == "last_month":
+        local_start = local_now - timedelta(days=30)
+    elif range_key == "last_year":
+        local_start = local_now - timedelta(days=365)
+    else:
+        raise ValueError(f"Unsupported dashboard time range: {range_key}")
+
+    return local_start.astimezone(timezone.utc)
+
+
+def spark_timestamp(value: datetime) -> datetime:
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def filter_from_time(df: DataFrame, time_col: str, start_time: datetime | None) -> DataFrame:
+    if start_time is None or time_col not in df.columns:
+        return df
+    return df.where(F.col(time_col) >= F.lit(spark_timestamp(start_time)))
+
+
+def time_range_caption(range_key: str, start_time: datetime | None) -> str:
+    label = TIME_RANGE_LABELS.get(range_key, range_key)
+    if start_time is None:
+        return f"{label}: all available local Delta history"
+    local_start = start_time.astimezone(dashboard_timezone())
+    return f"{label}: data from {local_start:%Y-%m-%d %H:%M %Z}"
+
+
+def latest_watchlist(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
     df = read_delta_table(spark, get_gold_table_paths()["gold_market_watchlist_summary"])
     if df is None:
         return empty_frame(
@@ -75,6 +131,7 @@ def latest_watchlist(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
             ]
         )
 
+    df = filter_from_time(df, "last_updated_time", start_time)
     window = Window.partitionBy("symbol").orderBy(F.col("last_updated_time").desc())
     return (
         df.withColumn("rank", F.row_number().over(window))
@@ -138,7 +195,7 @@ def attention_reason(row: pd.Series) -> str:
     return "Normal"
 
 
-def market_snapshot(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
+def market_snapshot(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
     paths = get_gold_table_paths()
     watchlist_df = read_delta_table(spark, paths["gold_market_watchlist_summary"])
     if watchlist_df is None:
@@ -159,10 +216,12 @@ def market_snapshot(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
             ]
         )
 
+    watchlist_df = filter_from_time(watchlist_df, "last_updated_time", start_time)
     latest_watchlist_df = latest_by_symbol(watchlist_df, "last_updated_time").alias("watchlist")
 
     spike_df = read_delta_table(spark, paths["gold_volume_spike_signals"])
     if spike_df is not None:
+        spike_df = filter_from_time(spike_df, "window_end", start_time)
         latest_spike_df = (
             latest_by_symbol(spike_df, "window_end")
             .select(
@@ -196,7 +255,7 @@ def market_snapshot(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
     return add_attention_score(snapshot_df).head(limit).reset_index(drop=True)
 
 
-def latest_volume_spikes(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
+def latest_volume_spikes(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
     df = read_delta_table(spark, get_gold_table_paths()["gold_volume_spike_signals"])
     if df is None:
         return empty_frame(
@@ -211,10 +270,11 @@ def latest_volume_spikes(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
                 "number_of_trades",
             ]
         )
+    df = filter_from_time(df, "window_end", start_time)
     return df.orderBy(F.col("window_end").desc(), F.col("volume_spike_ratio").desc()).limit(limit).toPandas()
 
 
-def latest_volatility(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
+def latest_volatility(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
     df = read_delta_table(spark, get_gold_table_paths()["gold_symbol_5min_volatility"])
     if df is None:
         return empty_frame(
@@ -227,10 +287,11 @@ def latest_volatility(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
                 "volatility_level",
             ]
         )
+    df = filter_from_time(df, "window_end", start_time)
     return df.orderBy(F.col("window_end").desc(), F.abs(F.col("price_change_pct")).desc()).limit(limit).toPandas()
 
 
-def latest_ohlc(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
+def latest_ohlc(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
     df = read_delta_table(spark, get_gold_table_paths()["gold_symbol_1min_ohlc"])
     if df is None:
         return empty_frame(
@@ -245,10 +306,11 @@ def latest_ohlc(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
                 "trade_count",
             ]
         )
+    df = filter_from_time(df, "window_end", start_time)
     return df.orderBy(F.col("window_end").desc(), F.col("trade_count").desc()).limit(limit).toPandas()
 
 
-def latest_price_alerts(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
+def latest_price_alerts(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
     df = read_delta_table(spark, get_gold_table_paths()["gold_price_movement_alerts"])
     if df is None:
         return empty_frame(
@@ -263,13 +325,17 @@ def latest_price_alerts(spark: SparkSession, limit: int = 50) -> pd.DataFrame:
                 "severity",
             ]
         )
+    df = filter_from_time(df, "window_end", start_time)
     return df.orderBy(F.col("window_end").desc(), F.abs(F.col("price_change_pct")).desc()).limit(limit).toPandas()
 
 
-def symbol_ohlc_history(spark: SparkSession, symbol: str, limit: int = 120) -> pd.DataFrame:
+def symbol_ohlc_history(
+    spark: SparkSession, symbol: str, limit: int = 120, start_time: datetime | None = None
+) -> pd.DataFrame:
     df = read_delta_table(spark, get_gold_table_paths()["gold_symbol_1min_ohlc"])
     if df is None:
         return empty_frame(["window_start", "window_end", "open_price", "high_price", "low_price", "close_price"])
+    df = filter_from_time(df, "window_end", start_time)
     return (
         df.where(F.col("symbol") == symbol)
         .orderBy(F.col("window_end").desc())
@@ -279,10 +345,13 @@ def symbol_ohlc_history(spark: SparkSession, symbol: str, limit: int = 120) -> p
     )
 
 
-def symbol_trade_summary_history(spark: SparkSession, symbol: str, limit: int = 60) -> pd.DataFrame:
+def symbol_trade_summary_history(
+    spark: SparkSession, symbol: str, limit: int = 60, start_time: datetime | None = None
+) -> pd.DataFrame:
     df = read_delta_table(spark, get_gold_table_paths()["gold_symbol_5min_trade_summary"])
     if df is None:
         return empty_frame(["window_start", "window_end", "total_volume", "number_of_trades"])
+    df = filter_from_time(df, "window_end", start_time)
     return (
         df.where(F.col("symbol") == symbol)
         .orderBy(F.col("window_end").desc())
@@ -292,10 +361,13 @@ def symbol_trade_summary_history(spark: SparkSession, symbol: str, limit: int = 
     )
 
 
-def symbol_spike_history(spark: SparkSession, symbol: str, limit: int = 60) -> pd.DataFrame:
+def symbol_spike_history(
+    spark: SparkSession, symbol: str, limit: int = 60, start_time: datetime | None = None
+) -> pd.DataFrame:
     df = read_delta_table(spark, get_gold_table_paths()["gold_volume_spike_signals"])
     if df is None:
         return empty_frame(["window_start", "window_end", "volume_spike_ratio", "signal_strength"])
+    df = filter_from_time(df, "window_end", start_time)
     return (
         df.where(F.col("symbol") == symbol)
         .orderBy(F.col("window_end").desc(), F.col("volume_spike_ratio").desc())
@@ -305,7 +377,7 @@ def symbol_spike_history(spark: SparkSession, symbol: str, limit: int = 60) -> p
     )
 
 
-def table_health(spark: SparkSession) -> pd.DataFrame:
+def table_health(spark: SparkSession, start_time: datetime | None = None) -> pd.DataFrame:
     rows = []
     for table_name, path in get_gold_table_paths().items():
         exists = delta_table_exists(path)
@@ -314,12 +386,15 @@ def table_health(spark: SparkSession) -> pd.DataFrame:
             "path": str(path),
             "delta_log_exists": exists,
             "row_count": 0,
+            "total_row_count": 0,
             "latest_time": None,
         }
         if exists:
             df = spark.read.format("delta").load(str(path))
-            row["row_count"] = df.count()
+            row["total_row_count"] = df.count()
             time_cols = [col for col in ("window_end", "last_updated_time") if col in df.columns]
+            count_df = filter_from_time(df, time_cols[0], start_time) if time_cols else df
+            row["row_count"] = count_df.count()
             if time_cols:
                 row["latest_time"] = df.agg(F.max(time_cols[0]).alias("latest_time")).collect()[0]["latest_time"]
         rows.append(row)
@@ -343,11 +418,11 @@ def freshness_label(latest_time: object, now: datetime | None = None) -> str:
     return "STALE"
 
 
-def overview_metrics(spark: SparkSession) -> dict[str, object]:
-    watchlist = market_snapshot(spark)
-    spikes = latest_volume_spikes(spark)
-    price_alerts = latest_price_alerts(spark)
-    health = table_health(spark)
+def overview_metrics(spark: SparkSession, start_time: datetime | None = None) -> dict[str, object]:
+    watchlist = market_snapshot(spark, start_time=start_time)
+    spikes = latest_volume_spikes(spark, start_time=start_time)
+    price_alerts = latest_price_alerts(spark, start_time=start_time)
+    health = table_health(spark, start_time=start_time)
 
     latest_time = None
     if not health.empty and "latest_time" in health:
@@ -374,6 +449,7 @@ def alert_topic_messages(
     bootstrap_servers: str = "localhost:9092",
     topic: str = "market.signals.alerts",
     limit: int = 50,
+    start_time: datetime | None = None,
 ) -> pd.DataFrame:
     try:
         kafka_df = (
@@ -417,6 +493,9 @@ def alert_topic_messages(
             "symbol_key",
             "alert.*",
         )
-        .orderBy(F.col("kafka_timestamp").desc(), F.col("offset").desc())
     )
+    if start_time is not None:
+        parsed = parsed.where(F.to_timestamp("created_at") >= F.lit(spark_timestamp(start_time)))
+
+    parsed = parsed.orderBy(F.col("kafka_timestamp").desc(), F.col("offset").desc())
     return parsed.limit(limit).toPandas()

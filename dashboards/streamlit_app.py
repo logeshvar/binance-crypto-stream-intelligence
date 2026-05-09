@@ -25,31 +25,35 @@ def get_spark():
 
 
 @st.cache_data(ttl=15)
-def load_market_data(row_limit: int, alert_limit: int):
+def load_market_data(row_limit: int, alert_limit: int, time_range_key: str):
     spark = get_spark()
+    start_time = queries.time_range_start(time_range_key)
     return {
-        "overview": queries.overview_metrics(spark),
-        "snapshot": queries.market_snapshot(spark, row_limit),
-        "volume_spikes": queries.latest_volume_spikes(spark, row_limit),
-        "volatility": queries.latest_volatility(spark, row_limit),
-        "price_alerts": queries.latest_price_alerts(spark, row_limit),
+        "overview": queries.overview_metrics(spark, start_time=start_time),
+        "snapshot": queries.market_snapshot(spark, row_limit, start_time=start_time),
+        "volume_spikes": queries.latest_volume_spikes(spark, row_limit, start_time=start_time),
+        "volatility": queries.latest_volatility(spark, row_limit, start_time=start_time),
+        "price_alerts": queries.latest_price_alerts(spark, row_limit, start_time=start_time),
         "alert_topic": queries.alert_topic_messages(
             spark,
             bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
             topic=os.getenv("TOPIC_SIGNALS_ALERTS", "market.signals.alerts"),
             limit=alert_limit,
+            start_time=start_time,
         ),
-        "health": queries.table_health(spark),
+        "health": queries.table_health(spark, start_time=start_time),
+        "time_range_caption": queries.time_range_caption(time_range_key, start_time),
     }
 
 
 @st.cache_data(ttl=15)
-def load_symbol_data(symbol: str):
+def load_symbol_data(symbol: str, time_range_key: str):
     spark = get_spark()
+    start_time = queries.time_range_start(time_range_key)
     return {
-        "ohlc": queries.symbol_ohlc_history(spark, symbol),
-        "trade_summary": queries.symbol_trade_summary_history(spark, symbol),
-        "spikes": queries.symbol_spike_history(spark, symbol),
+        "ohlc": queries.symbol_ohlc_history(spark, symbol, start_time=start_time),
+        "trade_summary": queries.symbol_trade_summary_history(spark, symbol, start_time=start_time),
+        "spikes": queries.symbol_spike_history(spark, symbol, start_time=start_time),
     }
 
 
@@ -84,6 +88,7 @@ def top_row(df: pd.DataFrame, column: str) -> pd.Series | None:
 def render_command_center(data: dict[str, object]) -> None:
     metrics = data["overview"]
     snapshot = data["snapshot"]
+    st.caption(data["time_range_caption"])
 
     strongest_spike = top_row(snapshot, "volume_spike_ratio")
     biggest_move = None
@@ -151,6 +156,7 @@ def render_command_center(data: dict[str, object]) -> None:
 
 
 def render_symbol_drilldown(snapshot: pd.DataFrame, symbol_data: dict[str, pd.DataFrame], selected_symbol: str) -> None:
+    st.caption(f"{selected_symbol} | filtered to the selected dashboard time range")
     current = snapshot[snapshot["symbol"] == selected_symbol]
     if not current.empty:
         row = current.iloc[0]
@@ -190,6 +196,7 @@ def render_symbol_drilldown(snapshot: pd.DataFrame, symbol_data: dict[str, pd.Da
 def render_alerts(data: dict[str, object]) -> None:
     alert_topic = data["alert_topic"]
     price_alerts = data["price_alerts"]
+    st.caption(data["time_range_caption"])
 
     if not alert_topic.empty:
         cols = st.columns(4)
@@ -209,6 +216,7 @@ def render_alerts(data: dict[str, object]) -> None:
 
 def render_health(data: dict[str, object]) -> None:
     health = data["health"].copy()
+    st.caption(data["time_range_caption"])
     if not health.empty:
         health["freshness"] = health["latest_time"].apply(queries.freshness_label)
         chart_df = health[["table", "row_count"]].set_index("table")
@@ -220,13 +228,18 @@ def main() -> None:
     st.title("Crypto Market Intelligence")
 
     with st.sidebar:
+        time_range_key = st.selectbox(
+            "Time Range",
+            list(queries.TIME_RANGE_LABELS.keys()),
+            format_func=lambda value: queries.TIME_RANGE_LABELS[value],
+        )
         row_limit = st.slider("Rows", min_value=25, max_value=200, value=100, step=25)
         alert_limit = st.slider("Alert Rows", min_value=25, max_value=200, value=100, step=25)
         if st.button("Refresh"):
             st.cache_data.clear()
             st.rerun()
 
-    data = load_market_data(row_limit=row_limit, alert_limit=alert_limit)
+    data = load_market_data(row_limit=row_limit, alert_limit=alert_limit, time_range_key=time_range_key)
     snapshot = data["snapshot"]
     symbols = sorted(snapshot["symbol"].dropna().unique().tolist()) if not snapshot.empty else []
 
@@ -234,7 +247,7 @@ def main() -> None:
         selected_symbol = st.selectbox("Symbol", symbols) if symbols else None
 
     symbol_data = (
-        load_symbol_data(selected_symbol)
+        load_symbol_data(selected_symbol, time_range_key)
         if selected_symbol
         else {"ohlc": pd.DataFrame(), "trade_summary": pd.DataFrame(), "spikes": pd.DataFrame()}
     )

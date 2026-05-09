@@ -27,4 +27,8 @@ fileignoreconfig:
   checksum: 918018a7f1783cb12ae66cb3aaf327686e12e0984e200f1cbdb67369de019c39
 - filename: tests/spark_bronze_fixtures.py
   checksum: ece828048e7550ae3a1fcda94102166aae91a74354140819601d20aaacc27162
+- filename: dashboards/queries.py
+  checksum: 27a8b2cfa95e97e00a19736794a9bac4b8860d29d425e53202b9791ac08a2def
+- filename: dashboards/streamlit_app.py
+  checksum: c83dcd6d8cf9e44cf56603c13874ec43fb69e2865c7d0798dee102e40d1026f9
 version: ""

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -9,6 +10,8 @@ from dashboards.queries import delta_table_exists
 from dashboards.queries import freshness_label
 from dashboards.queries import get_gold_table_paths
 from dashboards.queries import price_change_direction
+from dashboards.queries import time_range_caption
+from dashboards.queries import time_range_start
 
 
 def test_get_gold_table_paths_uses_supplied_root(tmp_path):
@@ -80,3 +83,24 @@ def test_price_change_direction_classifies_small_moves_as_flat():
     result = price_change_direction(pd.Series([-0.5, -0.01, 0.0, 0.2]))
 
     assert result.tolist() == ["DOWN", "FLAT", "FLAT", "UP"]
+
+
+def test_time_range_start_uses_dashboard_timezone_for_today():
+    now = datetime(2026, 5, 9, 18, 0, tzinfo=timezone.utc)
+
+    start = time_range_start("today", now=now, tz=ZoneInfo("Asia/Kolkata"))
+
+    assert start == datetime(2026, 5, 8, 18, 30, tzinfo=timezone.utc)
+
+
+def test_time_range_start_supports_relative_ranges_and_all():
+    now = datetime(2026, 5, 9, 18, 0, tzinfo=timezone.utc)
+
+    assert time_range_start("last_week", now=now, tz=ZoneInfo("UTC")) == now - timedelta(days=7)
+    assert time_range_start("last_month", now=now, tz=ZoneInfo("UTC")) == now - timedelta(days=30)
+    assert time_range_start("last_year", now=now, tz=ZoneInfo("UTC")) == now - timedelta(days=365)
+    assert time_range_start("all", now=now, tz=ZoneInfo("UTC")) is None
+
+
+def test_time_range_caption_describes_all_history():
+    assert time_range_caption("all", None) == "All: all available local Delta history"
