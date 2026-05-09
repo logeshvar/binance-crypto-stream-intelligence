@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 
 from sinks.alert_kafka_writer import AlertKafkaConfig
 from sinks.alert_kafka_writer import build_volume_alert_events
@@ -10,13 +9,14 @@ from sinks.alert_kafka_writer import write_alerts_to_kafka
 from streaming.alerts.common import AlertPublisherConfig
 from streaming.alerts.common import create_alert_spark_session
 from streaming.alerts.common import read_gold_delta_stream
+from streaming.logging_utils import configure_streaming_logging
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 def main() -> None:
-    logging.basicConfig(level=os.getenv("STREAMING_LOG_LEVEL", "INFO"))
+    configure_streaming_logging()
     publisher_config = AlertPublisherConfig.from_env(
         app_name="publish-volume-alerts",
         source_table_name="gold_volume_spike_signals",

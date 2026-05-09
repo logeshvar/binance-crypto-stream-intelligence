@@ -12,6 +12,7 @@ from streaming.bronze.common import (
     BronzeJobConfig,
     select_bronze_columns,
 )
+from streaming.logging_utils import configure_streaming_logging
 from streaming.spark_session import create_spark_session
 
 
@@ -120,7 +121,7 @@ def start_combined_query(configs: list[BronzeJobConfig], spark: SparkSession) ->
 
 
 def main() -> None:
-    logging.basicConfig(level=os.getenv("STREAMING_LOG_LEVEL", "INFO"))
+    configure_streaming_logging()
     os.environ.setdefault("SPARK_UI_PORT", os.getenv("BRONZE_SPARK_UI_PORT", "4040"))
 
     configs = build_configs()

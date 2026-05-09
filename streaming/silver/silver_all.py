@@ -13,6 +13,7 @@ from streaming.silver.common import (
     write_silver_stream,
 )
 from streaming.silver.transformations import transform_klines, transform_tickers, transform_trades
+from streaming.logging_utils import configure_streaming_logging
 from streaming.spark_session import create_spark_session
 
 
@@ -74,7 +75,7 @@ def start_query(
 
 
 def main() -> None:
-    logging.basicConfig(level=os.getenv("STREAMING_LOG_LEVEL", "INFO"))
+    configure_streaming_logging()
     os.environ.setdefault("SPARK_UI_PORT", os.getenv("SILVER_SPARK_UI_PORT", "4050"))
 
     jobs = build_jobs()

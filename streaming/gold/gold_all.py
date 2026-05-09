@@ -16,6 +16,7 @@ from streaming.gold.gold_trade_summary_5min import empty_trade_summary_df
 from streaming.gold.gold_volatility_5min import build_volatility_5min
 from streaming.gold.gold_volume_spikes import start_volume_spike_query
 from streaming.gold.gold_watchlist_summary import build_watchlist_summary
+from streaming.logging_utils import configure_streaming_logging
 from streaming.spark_session import create_spark_session
 
 
@@ -104,7 +105,7 @@ def start_query(
 
 
 def main() -> None:
-    logging.basicConfig(level=os.getenv("STREAMING_LOG_LEVEL", "INFO"))
+    configure_streaming_logging()
     os.environ.setdefault("SPARK_UI_PORT", os.getenv("GOLD_SPARK_UI_PORT", "4060"))
 
     jobs = build_jobs()
