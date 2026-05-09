@@ -9,6 +9,18 @@ from dashboards import queries
 from streaming.spark_session import create_spark_session
 
 
+ALERT_DISPLAY_COLUMNS = [
+    "symbol",
+    "alert_type",
+    "severity",
+    "metric_value",
+    "description",
+    "window_start",
+    "window_end",
+    "created_at",
+]
+
+
 st.set_page_config(
     page_title="Crypto Market Intelligence",
     page_icon="",
@@ -34,7 +46,7 @@ def load_market_data(row_limit: int, alert_limit: int, time_range_key: str):
         "volume_spikes": queries.latest_volume_spikes(spark, row_limit, start_time=start_time),
         "volatility": queries.latest_volatility(spark, row_limit, start_time=start_time),
         "price_alerts": queries.latest_price_alerts(spark, row_limit, start_time=start_time),
-        "alert_topic": queries.alert_topic_messages(
+        "published_alerts": queries.alert_topic_messages(
             spark,
             bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
             topic=os.getenv("TOPIC_SIGNALS_ALERTS", "market.signals.alerts"),
@@ -63,6 +75,10 @@ def numeric_series(df: pd.DataFrame, column: str) -> pd.Series:
 
 def render_dataframe(df: pd.DataFrame, height: int = 420) -> None:
     st.dataframe(df, width="stretch", height=height, hide_index=True)
+
+
+def display_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    return df[[column for column in columns if column in df.columns]]
 
 
 def metric_value(value: object, suffix: str = "") -> str:
@@ -194,21 +210,21 @@ def render_symbol_drilldown(snapshot: pd.DataFrame, symbol_data: dict[str, pd.Da
 
 
 def render_alerts(data: dict[str, object]) -> None:
-    alert_topic = data["alert_topic"]
+    published_alerts = display_columns(data["published_alerts"], ALERT_DISPLAY_COLUMNS)
     price_alerts = data["price_alerts"]
     st.caption(data["time_range_caption"])
 
-    if not alert_topic.empty:
+    if not published_alerts.empty:
         cols = st.columns(4)
-        cols[0].metric("Kafka Alerts", len(alert_topic))
-        cols[1].metric("Symbols Alerted", alert_topic["symbol"].nunique())
-        cols[2].metric("High Severity", int((alert_topic["severity"] == "HIGH").sum()))
-        cols[3].metric("Latest Alert", str(alert_topic["created_at"].max()))
+        cols[0].metric("Published Alerts", len(published_alerts))
+        cols[1].metric("Symbols Alerted", published_alerts["symbol"].nunique())
+        cols[2].metric("High Severity", int((published_alerts["severity"] == "HIGH").sum()))
+        cols[3].metric("Latest Alert", str(published_alerts["created_at"].max()))
 
     left, right = st.columns([1.1, 1])
     with left:
-        st.subheader("Kafka Alert History")
-        render_dataframe(alert_topic, height=440)
+        st.subheader("Published Alert History")
+        render_dataframe(published_alerts, height=440)
     with right:
         st.subheader("Gold Price Alerts")
         render_dataframe(price_alerts, height=440)
