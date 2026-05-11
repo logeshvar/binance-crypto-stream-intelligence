@@ -231,9 +231,12 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 │   └── spark/
 └── docs/
     ├── architecture.md
+    ├── checkpoint_recovery.md
     ├── data_quality.md
     ├── kafka_design.md
-    └── schema_contracts.md
+    ├── operational_runbook.md
+    ├── schema_contracts.md
+    └── streaming_semantics.md
 ```
 
 ## Design Docs
@@ -242,6 +245,35 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 - [Data quality](docs/data_quality.md)
 - [Kafka design](docs/kafka_design.md)
 - [Schema contracts](docs/schema_contracts.md)
+- [Streaming semantics](docs/streaming_semantics.md)
+- [Checkpointing and recovery](docs/checkpoint_recovery.md)
+- [Operational runbook](docs/operational_runbook.md)
+
+## Dashboard
+
+The Streamlit dashboard is designed as a serving and inspection layer for Gold outputs. It includes:
+
+- Time range filtering for Today, Last Week, Last Month, Last Year, and All
+- Attention-ranked symbols based on price movement, volume spike ratio, volatility, and signal strength
+- Symbol drilldowns for 1-minute close price, 5-minute volume, and spike ratio history
+- Business-facing alert history without Kafka transport metadata
+- Pipeline health view with selected-range row counts and freshness labels
+
+Run it locally:
+
+```bash
+make dashboard PYTHON=.venv/bin/python
+```
+
+## Testing
+
+Run the full test suite:
+
+```bash
+make test PYTHON=.venv/bin/python
+```
+
+The tests cover producer routing, validation, DLQ behavior, Bronze/Silver transformations, deduplication, Gold calculations, alert event generation, dashboard query helpers, and logging configuration.
 
 ## Engineering Focus
 
