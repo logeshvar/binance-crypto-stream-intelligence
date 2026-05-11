@@ -233,6 +233,7 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
     ├── architecture.md
     ├── checkpoint_recovery.md
     ├── data_quality.md
+    ├── demo_evidence.md
     ├── kafka_design.md
     ├── operational_runbook.md
     ├── schema_contracts.md
@@ -248,6 +249,7 @@ Open `notebooks/inspect_delta_tables.ipynb` and select the `Crypto Market Intell
 - [Streaming semantics](docs/streaming_semantics.md)
 - [Checkpointing and recovery](docs/checkpoint_recovery.md)
 - [Operational runbook](docs/operational_runbook.md)
+- [Demo evidence](docs/demo_evidence.md)
 
 ## Dashboard
 
