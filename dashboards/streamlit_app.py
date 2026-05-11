@@ -40,12 +40,15 @@ def get_spark():
 def load_market_data(row_limit: int, alert_limit: int, time_range_key: str):
     spark = get_spark()
     start_time = queries.time_range_start(time_range_key)
+    snapshot = queries.market_snapshot(spark, row_limit, start_time=start_time)
+    volume_spikes = queries.latest_volume_spikes(spark, row_limit, start_time=start_time)
+    price_alerts = queries.latest_price_alerts(spark, row_limit, start_time=start_time)
+    health = queries.table_health(spark, start_time=start_time)
+
     return {
-        "overview": queries.overview_metrics(spark, start_time=start_time),
-        "snapshot": queries.market_snapshot(spark, row_limit, start_time=start_time),
-        "volume_spikes": queries.latest_volume_spikes(spark, row_limit, start_time=start_time),
-        "volatility": queries.latest_volatility(spark, row_limit, start_time=start_time),
-        "price_alerts": queries.latest_price_alerts(spark, row_limit, start_time=start_time),
+        "overview": queries.build_overview_metrics(snapshot, volume_spikes, price_alerts, health),
+        "snapshot": snapshot,
+        "price_alerts": price_alerts,
         "published_alerts": queries.alert_topic_messages(
             spark,
             bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
@@ -53,7 +56,7 @@ def load_market_data(row_limit: int, alert_limit: int, time_range_key: str):
             limit=alert_limit,
             start_time=start_time,
         ),
-        "health": queries.table_health(spark, start_time=start_time),
+        "health": health,
         "time_range_caption": queries.time_range_caption(time_range_key, start_time),
     }
 

@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from dashboards.queries import add_attention_score
+from dashboards.queries import build_overview_metrics
 from dashboards.queries import delta_table_exists
 from dashboards.queries import freshness_label
 from dashboards.queries import get_gold_table_paths
@@ -104,3 +105,25 @@ def test_time_range_start_supports_relative_ranges_and_all():
 
 def test_time_range_caption_describes_all_history():
     assert time_range_caption("all", None) == "All: all available local Delta history"
+
+
+def test_build_overview_metrics_uses_preloaded_dashboard_frames():
+    watchlist = pd.DataFrame(
+        [
+            {"symbol": "BTCUSDT", "volume_spike_ratio": 2.2, "price_change_5m_pct": 0.4},
+            {"symbol": "ETHUSDT", "volume_spike_ratio": 1.1, "price_change_5m_pct": -1.8},
+        ]
+    )
+    spikes = pd.DataFrame([{"signal_strength": "HIGH"}, {"signal_strength": "LOW"}])
+    price_alerts = pd.DataFrame([{"symbol": "ETHUSDT"}])
+    latest_time = datetime(2026, 5, 9, 12, 0, tzinfo=timezone.utc)
+    health = pd.DataFrame([{"latest_time": latest_time}])
+
+    metrics = build_overview_metrics(watchlist, spikes, price_alerts, health)
+
+    assert metrics["symbols"] == 2
+    assert metrics["high_volume_spikes"] == 1
+    assert metrics["price_alerts"] == 1
+    assert metrics["strongest_spike"] == 2.2
+    assert metrics["biggest_abs_move"] == 1.8
+    assert metrics["latest_gold_time"] == latest_time

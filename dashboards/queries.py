@@ -116,33 +116,6 @@ def time_range_caption(range_key: str, start_time: datetime | None) -> str:
     return f"{label}: data from {local_start:%Y-%m-%d %H:%M %Z}"
 
 
-def latest_watchlist(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
-    df = read_delta_table(spark, get_gold_table_paths()["gold_market_watchlist_summary"])
-    if df is None:
-        return empty_frame(
-            [
-                "symbol",
-                "latest_price",
-                "price_change_5m_pct",
-                "volume_5m",
-                "volatility_level",
-                "latest_signal",
-                "last_updated_time",
-            ]
-        )
-
-    df = filter_from_time(df, "last_updated_time", start_time)
-    window = Window.partitionBy("symbol").orderBy(F.col("last_updated_time").desc())
-    return (
-        df.withColumn("rank", F.row_number().over(window))
-        .where(F.col("rank") == 1)
-        .drop("rank")
-        .orderBy(F.col("volume_5m").desc())
-        .limit(limit)
-        .toPandas()
-    )
-
-
 def latest_by_symbol(df: DataFrame, time_col: str) -> DataFrame:
     window = Window.partitionBy("symbol").orderBy(F.col(time_col).desc())
     return df.withColumn("rank", F.row_number().over(window)).where(F.col("rank") == 1).drop("rank")
@@ -217,7 +190,7 @@ def market_snapshot(spark: SparkSession, limit: int = 50, start_time: datetime |
         )
 
     watchlist_df = filter_from_time(watchlist_df, "last_updated_time", start_time)
-    latest_watchlist_df = latest_by_symbol(watchlist_df, "last_updated_time").alias("watchlist")
+    latest_summary_df = latest_by_symbol(watchlist_df, "last_updated_time").alias("watchlist")
 
     spike_df = read_delta_table(spark, paths["gold_volume_spike_signals"])
     if spike_df is not None:
@@ -232,15 +205,15 @@ def market_snapshot(spark: SparkSession, limit: int = 50, start_time: datetime |
             )
             .alias("spikes")
         )
-        latest_watchlist_df = latest_watchlist_df.join(latest_spike_df, on="symbol", how="left")
+        latest_summary_df = latest_summary_df.join(latest_spike_df, on="symbol", how="left")
     else:
-        latest_watchlist_df = (
-            latest_watchlist_df.withColumn("volume_spike_ratio", F.lit(None).cast("double"))
+        latest_summary_df = (
+            latest_summary_df.withColumn("volume_spike_ratio", F.lit(None).cast("double"))
             .withColumn("signal_strength", F.lit(None).cast("string"))
             .withColumn("volume_spike_window_end", F.lit(None).cast("timestamp"))
         )
 
-    snapshot_df = latest_watchlist_df.select(
+    snapshot_df = latest_summary_df.select(
         "symbol",
         "latest_price",
         "price_change_5m_pct",
@@ -272,42 +245,6 @@ def latest_volume_spikes(spark: SparkSession, limit: int = 50, start_time: datet
         )
     df = filter_from_time(df, "window_end", start_time)
     return df.orderBy(F.col("window_end").desc(), F.col("volume_spike_ratio").desc()).limit(limit).toPandas()
-
-
-def latest_volatility(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
-    df = read_delta_table(spark, get_gold_table_paths()["gold_symbol_5min_volatility"])
-    if df is None:
-        return empty_frame(
-            [
-                "symbol",
-                "window_start",
-                "window_end",
-                "avg_price",
-                "price_change_pct",
-                "volatility_level",
-            ]
-        )
-    df = filter_from_time(df, "window_end", start_time)
-    return df.orderBy(F.col("window_end").desc(), F.abs(F.col("price_change_pct")).desc()).limit(limit).toPandas()
-
-
-def latest_ohlc(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
-    df = read_delta_table(spark, get_gold_table_paths()["gold_symbol_1min_ohlc"])
-    if df is None:
-        return empty_frame(
-            [
-                "symbol",
-                "window_start",
-                "window_end",
-                "open_price",
-                "high_price",
-                "low_price",
-                "close_price",
-                "trade_count",
-            ]
-        )
-    df = filter_from_time(df, "window_end", start_time)
-    return df.orderBy(F.col("window_end").desc(), F.col("trade_count").desc()).limit(limit).toPandas()
 
 
 def latest_price_alerts(spark: SparkSession, limit: int = 50, start_time: datetime | None = None) -> pd.DataFrame:
@@ -418,12 +355,12 @@ def freshness_label(latest_time: object, now: datetime | None = None) -> str:
     return "STALE"
 
 
-def overview_metrics(spark: SparkSession, start_time: datetime | None = None) -> dict[str, object]:
-    watchlist = market_snapshot(spark, start_time=start_time)
-    spikes = latest_volume_spikes(spark, start_time=start_time)
-    price_alerts = latest_price_alerts(spark, start_time=start_time)
-    health = table_health(spark, start_time=start_time)
-
+def build_overview_metrics(
+    watchlist: pd.DataFrame,
+    spikes: pd.DataFrame,
+    price_alerts: pd.DataFrame,
+    health: pd.DataFrame,
+) -> dict[str, object]:
     latest_time = None
     if not health.empty and "latest_time" in health:
         latest_values = health["latest_time"].dropna()
