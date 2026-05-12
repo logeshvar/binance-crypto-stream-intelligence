@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This page is an editable walkthrough for screenshots and notes that prove the pipeline works end to end. Add screenshots under `docs/assets/` using the filenames below, then update any captions with details from your local run.
+This page captures visual evidence that the Real-Time Crypto Market Intelligence Pipeline runs locally from ingestion through serving. Screenshots are stored in `docs/assets/` and show the local Kafka topics, producer, streaming jobs, Delta tables, and dashboard views.
 
 ## Run Commands
 
@@ -40,28 +40,20 @@ Start the dashboard:
 make dashboard PYTHON=.venv/bin/python
 ```
 
-Run tests:
-
-```bash
-make test PYTHON=.venv/bin/python
-```
-
 ## Evidence Checklist
 
-| Evidence | Screenshot file | What it proves |
+| Evidence | Screenshot file | What it shows |
 | --- | --- | --- |
-| Kafka topics | `docs/assets/kafka-ui-topics.png` | Required Kafka topics exist with the expected event separation. |
-| Producer running | `docs/assets/producer-running.png` | Binance public WebSocket events are being consumed and published. |
-| Streams running | `docs/assets/bronze-silver-gold-streams.png` | Bronze, Silver, and Gold streaming jobs are active. |
-| Bronze table | `docs/assets/delta-bronze-table.png` | Raw Kafka metadata and payloads are persisted in Delta. |
-| Silver table | `docs/assets/delta-silver-table.png` | Raw events are parsed into typed, normalized records. |
-| Gold table | `docs/assets/delta-gold-table.png` | Windowed market intelligence outputs are queryable. |
-| Dashboard command center | `docs/assets/dashboard-command-center.png` | Current market state and attention-ranked symbols are served. |
-| Dashboard symbol drilldown | `docs/assets/dashboard-symbol-drilldown.png` | Per-symbol price, volume, and spike history can be inspected. |
-| Dashboard alerts | `docs/assets/dashboard-alerts.png` | Alert events are visible without Kafka transport metadata. |
-| Dashboard pipeline health | `docs/assets/dashboard-pipeline-health.png` | Table freshness and row counts are visible. |
-| Tests passing | `docs/assets/tests-passing.png` | Unit and transformation tests pass locally. |
-| Alert topic | `docs/assets/kafka-alert-topic.png` | Gold alerts are published to the alert topic. |
+| Kafka topics | `docs/assets/kafka-ui-topics.png` | Local Kafka topics, partitions, message counts, and retained topic sizes. |
+| Producer running | `docs/assets/producer-running.png` | The async Binance WebSocket producer connected to public combined streams. |
+| Streams running | `docs/assets/bronze-silver-gold-streams.png` | Bronze, Silver, and Gold streaming jobs running in separate terminals. |
+| Bronze table | `docs/assets/delta-bronze-table.png` | Raw trade events persisted with Kafka metadata and payload strings. |
+| Silver table | `docs/assets/delta-silver-table.png` | Parsed ticker records with typed analytics fields. |
+| Gold table | `docs/assets/delta-gold-table.png` | Watchlist summary rows generated from Gold-level market analytics. |
+| Dashboard command center | `docs/assets/dashboard-command-center.png` | Current market overview, attention-ranked symbols, and leader charts. |
+| Dashboard symbol drilldown | `docs/assets/dashboard-symbol-drilldown.png` | Per-symbol price, volume, and spike-ratio inspection. |
+| Dashboard alerts | `docs/assets/dashboard-alerts.png` | Published alert history and empty price-alert table when thresholds are not crossed. |
+| Dashboard pipeline health | `docs/assets/dashboard-pipeline-health.png` | Gold table row counts, Delta status, latest update times, and freshness labels. |
 
 ## Screenshots
 
@@ -69,124 +61,145 @@ make test PYTHON=.venv/bin/python
 
 ![Kafka UI topics](assets/kafka-ui-topics.png)
 
-Expected notes:
+The Kafka UI shows the local `local-crypto-kafka` cluster with the project topics created and actively receiving data. The raw topics are separated by event type:
 
-- Raw topics are split by event type.
-- Invalid events and alert topics are separated from raw market events.
-- Symbol-based message routing supports per-symbol ordering.
+- `market.trades.raw` has 6 partitions and the highest message volume.
+- `market.klines.raw` and `market.tickers.raw` have 3 partitions each.
+- `market.events.invalid` is present for dead-letter handling.
+- `market.signals.alerts` is present and contains published alert events.
 
 ### Producer Running
 
 ![Producer running](assets/producer-running.png)
 
-Expected notes:
+The producer screenshot shows `make producer PYTHON=.venv/bin/python` running the Binance WebSocket producer from the project virtual environment. The logs show:
 
-- Producer connects to Binance public combined streams.
-- Events are routed to trade, kline, and ticker topics.
-- Invalid messages are sent to the DLQ instead of being silently dropped.
+- Kafka producer startup against `localhost:9092`.
+- Connection to the Binance public combined stream URL.
+- `stream_count` of 30, covering trade, kline, and ticker streams for the configured symbols.
+- Successful WebSocket connection after startup.
 
 ### Streaming Jobs
 
 ![Bronze Silver Gold streams](assets/bronze-silver-gold-streams.png)
 
-Expected notes:
+The terminal layout shows the streaming layers running as local Spark applications:
 
-- Bronze, Silver, and Gold streams run as grouped Spark applications.
-- Each streaming query uses its own checkpoint path.
-- Spark UI can be used to inspect query progress.
+- Bronze is continuously writing raw market batches into Bronze Delta tables.
+- Silver is started separately through `make silver-all`.
+- Gold is started separately through `make gold-all`.
+
+The Bronze logs show repeated batch writes for trades, klines, and tickers, which confirms that the combined Bronze stream is consuming Kafka and persisting data.
 
 ### Bronze Delta Table
 
 ![Bronze Delta table](assets/delta-bronze-table.png)
 
-Expected notes:
+The notebook preview shows `bronze_market_trades_raw` under `storage/bronze`. The table contains more than 500k rows in this run and preserves the raw ingestion contract:
 
-- Kafka metadata such as topic, partition, offset, message routing value, and timestamp is preserved in Bronze.
-- Raw payload strings remain available for audit and replay.
+- Kafka topic, partition, offset, message routing value, and Kafka timestamp.
+- Raw JSON payload stored as `value`.
+- Local ingestion time and process date.
+
+This proves the Bronze layer keeps replay and audit data instead of immediately discarding source metadata.
 
 ### Silver Delta Table
 
 ![Silver Delta table](assets/delta-silver-table.png)
 
-Expected notes:
+The Silver notebook preview shows `silver_market_tickers` registered as a queryable table. It contains normalized ticker records with typed columns such as:
 
-- Silver records contain typed columns such as symbol, event time, price, quantity, and trade value.
-- Duplicate trades are removed using symbol and trade ID.
-- Invalid business records do not enter Silver.
+- `symbol`
+- `event_time`
+- `last_price`
+- `price_change`
+- `price_change_percent`
+- `weighted_avg_price`
+- `high_price`
+- `low_price`
+- `volume`
+- `quote_volume`
+- `source`
+- `process_time`
+
+The screenshot also shows data across multiple symbols and dates, which demonstrates that raw exchange payloads have been converted into analytics-ready records.
 
 ### Gold Delta Table
 
 ![Gold Delta table](assets/delta-gold-table.png)
 
-Expected notes:
+The Gold notebook preview shows `gold_market_watchlist_summary`, the serving-friendly summary table used by the dashboard. Rows include:
 
-- Gold tables contain event-time windowed analytics.
-- Useful examples include OHLC, volume spikes, volatility, and price movement alerts.
+- latest symbol price
+- 5-minute price movement percentage
+- 5-minute volume
+- volatility level
+- latest signal
+- last updated time
+
+The screenshot shows multiple symbols updating across 5-minute windows. `latest_signal` is `NONE` for the visible rows, which is valid for normal market periods where no stronger signal is active for that symbol/window.
 
 ### Dashboard Command Center
 
 ![Dashboard command center](assets/dashboard-command-center.png)
 
-Expected notes:
+The Command Center screenshot shows the main dashboard view filtered to `Today`. It summarizes current market state with:
 
-- The time range filter keeps old test data from cluttering the current demo.
-- Symbols are ranked by attention score.
-- Strongest spike, biggest move, and freshness are visible at a glance.
+- 9 active symbols.
+- strongest volume spike ratio of `0.84x`.
+- biggest 5-minute move of `0.25%`.
+- 16 high spike windows.
+- Gold freshness marked as `FRESH`.
+
+The attention-ranked table surfaces the symbols most worth inspecting, while the leader panel and bar charts show the strongest current volume and price movement signals.
 
 ### Dashboard Symbol Drilldown
 
 ![Dashboard symbol drilldown](assets/dashboard-symbol-drilldown.png)
 
-Expected notes:
+The Symbol Drilldown screenshot focuses on `ADAUSDT`. It shows:
 
-- Drilldown shows 1-minute close price history.
-- 5-minute volume and spike ratio help explain why a symbol is interesting.
+- latest price around `0.28`.
+- 5-minute move of `0.25%`.
+- 5-minute volume of `13,494.90`.
+- spike ratio of `0.23x`.
+- volatility level `LOW`.
+
+The lower panels show 1-minute close price history, 5-minute volume bars, spike-ratio movement, and the underlying Gold rows used for the visualizations.
 
 ### Dashboard Alerts
 
 ![Dashboard alerts](assets/dashboard-alerts.png)
 
-Expected notes:
+The Alerts screenshot shows the dashboard filtered to `Last Week`. It includes:
 
-- Alerts are shown as business events.
-- Kafka topic, partition, offset, and routing metadata are intentionally hidden from the dashboard.
+- 90 published alerts.
+- 9 symbols alerted.
+- 70 high-severity alerts.
+- published alert records for `VOLUME_SPIKE` events.
+
+The `Gold Price Alerts` table is empty in this run. That is acceptable because price surge/drop alerts are threshold-based and only appear when the configured 5-minute movement threshold is crossed. The alerting system is still demonstrated by the volume spike alerts shown in the published alert history.
 
 ### Dashboard Pipeline Health
 
 ![Dashboard pipeline health](assets/dashboard-pipeline-health.png)
 
-Expected notes:
+The Pipeline Health screenshot shows Gold table freshness and row counts for the selected time range. The visible rows show:
 
-- Gold table row counts and latest update times are visible.
-- Freshness labels help identify stale outputs.
+- Delta logs exist for all Gold tables.
+- OHLC, trade summary, volatility, volume spike, and watchlist tables contain rows.
+- Latest update times are marked `FRESH` for active Gold outputs.
+- `gold_price_movement_alerts` has zero rows and `NO_DATA`, which matches the empty price-alert evidence from the Alerts tab.
 
-### Tests Passing
-
-![Tests passing](assets/tests-passing.png)
-
-Expected notes:
-
-- Tests cover producer routing, validators, DLQ behavior, Silver transforms, Gold calculations, alert generation, and dashboard query helpers.
-
-### Alert Topic
-
-![Kafka alert topic](assets/kafka-alert-topic.png)
-
-Expected notes:
-
-- Gold signal publishers emit alert records to `market.signals.alerts`.
-- Alert events follow the documented alert schema.
-
-## Interview Evidence Map
+## Portfolio Evidence Map
 
 | Topic | Evidence |
 | --- | --- |
 | Kafka topic design | Kafka topics screenshot, topic config, Kafka design docs |
-| Producer reliability | Producer logs, reconnect handling in code |
-| Data quality | DLQ topic, validators, invalid event schema |
+| Producer reliability | Producer logs and reconnect-capable producer code |
+| Data quality | Invalid-event topic, validators, invalid event schema |
 | Bronze/Silver/Gold architecture | Delta table screenshots and architecture docs |
-| Event-time processing | Gold table screenshot, streaming semantics docs |
-| Checkpoint recovery | Stream screenshots, checkpoint recovery docs |
-| Alerting | Dashboard alerts and alert topic screenshots |
-| Serving layer | Dashboard screenshots |
-| Testing | Tests passing screenshot and pytest suite |
+| Event-time processing | Gold table screenshot and streaming semantics docs |
+| Checkpoint recovery | Stream screenshots and checkpoint recovery docs |
+| Alerting | Dashboard alert history showing published volume spike alerts |
+| Serving layer | Dashboard command center, drilldown, alerts, and health screenshots |
