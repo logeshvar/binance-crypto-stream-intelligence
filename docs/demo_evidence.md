@@ -40,21 +40,6 @@ Start the dashboard:
 make dashboard PYTHON=.venv/bin/python
 ```
 
-## Evidence Checklist
-
-| Evidence | Screenshot file | What it shows |
-| --- | --- | --- |
-| Kafka topics | `docs/assets/kafka-ui-topics.png` | Local Kafka topics, partitions, message counts, and retained topic sizes. |
-| Producer running | `docs/assets/producer-running.png` | The async Binance WebSocket producer connected to public combined streams. |
-| Streams running | `docs/assets/bronze-silver-gold-streams.png` | Bronze, Silver, and Gold streaming jobs running in separate terminals. |
-| Bronze table | `docs/assets/delta-bronze-table.png` | Raw trade events persisted with Kafka metadata and payload strings. |
-| Silver table | `docs/assets/delta-silver-table.png` | Parsed ticker records with typed analytics fields. |
-| Gold table | `docs/assets/delta-gold-table.png` | Watchlist summary rows generated from Gold-level market analytics. |
-| Dashboard command center | `docs/assets/dashboard-command-center.png` | Current market overview, attention-ranked symbols, and leader charts. |
-| Dashboard symbol drilldown | `docs/assets/dashboard-symbol-drilldown.png` | Per-symbol price, volume, and spike-ratio inspection. |
-| Dashboard alerts | `docs/assets/dashboard-alerts.png` | Published alert history and empty price-alert table when thresholds are not crossed. |
-| Dashboard pipeline health | `docs/assets/dashboard-pipeline-health.png` | Gold table row counts, Delta status, latest update times, and freshness labels. |
-
 ## Screenshots
 
 ### Kafka Topics
@@ -190,16 +175,3 @@ The Pipeline Health screenshot shows Gold table freshness and row counts for the
 - OHLC, trade summary, volatility, volume spike, and watchlist tables contain rows.
 - Latest update times are marked `FRESH` for active Gold outputs.
 - `gold_price_movement_alerts` has zero rows and `NO_DATA`, which matches the empty price-alert evidence from the Alerts tab.
-
-## Portfolio Evidence Map
-
-| Topic | Evidence |
-| --- | --- |
-| Kafka topic design | Kafka topics screenshot, topic config, Kafka design docs |
-| Producer reliability | Producer logs and reconnect-capable producer code |
-| Data quality | Invalid-event topic, validators, invalid event schema |
-| Bronze/Silver/Gold architecture | Delta table screenshots and architecture docs |
-| Event-time processing | Gold table screenshot and streaming semantics docs |
-| Checkpoint recovery | Stream screenshots and checkpoint recovery docs |
-| Alerting | Dashboard alert history showing published volume spike alerts |
-| Serving layer | Dashboard command center, drilldown, alerts, and health screenshots |
