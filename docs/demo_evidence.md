@@ -42,6 +42,18 @@ make dashboard PYTHON=.venv/bin/python
 
 ## Screenshots
 
+### Project Architecture
+
+![Project architecture](assets/project-architecture.png)
+
+The architecture diagram shows the full local-first pipeline:
+
+- Binance public WebSocket streams feed the async Python producer.
+- The producer validates, routes, and publishes events into Kafka topics using symbol as the routing value.
+- Spark Structured Streaming writes raw Kafka events to Bronze Delta tables, normalized records to Silver Delta tables, and event-time analytics to Gold Delta tables.
+- Alert publishers read Gold signal tables and publish alert JSON to `market.signals.alerts`.
+- The Streamlit dashboard reads Gold Delta outputs and consumes published alert events for serving.
+
 ### Kafka Topics
 
 ![Kafka UI topics](assets/kafka-ui-topics.png)

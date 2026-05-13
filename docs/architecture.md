@@ -8,6 +8,8 @@ It ingests only Binance public market WebSocket data. It does not use paid APIs,
 
 ## High-Level Flow
 
+![Project architecture](assets/project-architecture.png)
+
 ```mermaid
 flowchart LR
     A["Binance public WebSocket streams"] --> B["Python async producer"]

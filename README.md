@@ -27,6 +27,8 @@ Crypto markets generate continuous, high-frequency trade and price events across
 
 ## Architecture
 
+![Project architecture](docs/assets/project-architecture.png)
+
 ```mermaid
 flowchart LR
     A["Binance public WebSocket streams"] --> B["Python async producer"]
